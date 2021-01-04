@@ -1,16 +1,14 @@
-
 const neo4j = require('neo4j-driver');
 
 class GraphDAO {
-  
   constructor() {
     this.driver = neo4j.driver(`bolt://${process.env.GRAPHDB_HOST}`);
   }
 
   prepare() {
     return new Promise((resolve) => {
-      this.run("CREATE CONSTRAINT ON (n:Movie) ASSERT n.id IS UNIQUE", {}).then(() => {
-        this.run("CREATE CONSTRAINT ON (u:User) ASSERT u.id IS UNIQUE", {}).then(() => resolve());
+      this.run('CREATE CONSTRAINT ON (n:Movie) ASSERT n.id IS UNIQUE', {}).then(() => {
+        this.run('CREATE CONSTRAINT ON (u:User) ASSERT u.id IS UNIQUE', {}).then(() => resolve());
       });
     });
   }
@@ -57,13 +55,12 @@ class GraphDAO {
       movieId,
     }).then((res) => {
       if (res.records.length === 0) return null;
-      else {
-        const record = res.records[0].get('l');
-        return {
-          rank: record.properties.rank,
-          at: record.properties.at,
-        }
-      }
+
+      const record = res.records[0].get('l');
+      return {
+        rank: record.properties.rank,
+        at: record.properties.at,
+      };
     });
   }
 
@@ -71,7 +68,7 @@ class GraphDAO {
     return this.run('MERGE (m:Movie{id: $movieId}) ON CREATE SET m.title = $movieTitle RETURN m', {
       movieId,
       movieTitle,
-    })
+    });
   }
 
   upsertActor(movieId, actor) {
@@ -150,11 +147,11 @@ class GraphDAO {
       userId: this.toInt(userId),
       movieId,
       at: this.toDate(liked.at),
-      rank: this.toInt(liked.rank)
+      rank: this.toInt(liked.rank),
     });
   }
 
-   upsertGenreLiked(userId, genreId, liked) {
+  upsertGenreLiked(userId, genreId, liked) {
     return this.run(`
       MATCH (g:Genre{ id: $genreId })
       MATCH (u:User{ id: $userId })
@@ -167,7 +164,7 @@ class GraphDAO {
       userId: this.toInt(userId),
       genreId: this.toInt(genreId),
       at: this.toDate(liked.at),
-      rank: liked.rank
+      rank: liked.rank,
     });
   }
 
@@ -184,7 +181,7 @@ class GraphDAO {
       userId: this.toInt(userId),
       actorId: this.toInt(actorId),
       at: this.toDate(liked.at),
-      rank: this.toInt(liked.rank)
+      rank: this.toInt(liked.rank),
     });
   }
 
@@ -218,7 +215,7 @@ class GraphDAO {
       movieId,
       commentId: this.toInt(comment.id),
       commentAt: this.toDate(comment.at),
-      commentText: comment.text
+      commentText: comment.text,
     });
   }
 
@@ -238,7 +235,7 @@ class GraphDAO {
       commentId: this.toInt(commentId),
       subCommentId: this.toInt(comment.id),
       subCommentAt: this.toDate(comment.at),
-      subCommentText: comment.text
+      subCommentText: comment.text,
     });
   }
 
@@ -254,13 +251,13 @@ class GraphDAO {
       userId
     }).then((result) => result.records);
     */
-   return this.run(`
+    return this.run(`
       match (u:User{id: $userId})-[l:LIKED]->(m:Movie)<-[:PLAYED_IN]-(a:Actor)
       return a, count(*)
       order by count(*) desc
       limit 5
     `, {
-      userId
+      userId,
     }).then((result) => result.records);
   }
 

@@ -10,21 +10,19 @@ const graphDAO = new GraphDAO();
 const documentDAO = new DocumentDAO();
 
 function stripMargin(template, ...expressions) {
-  const result = template.reduce((accumulator, part, i) => {
-      return accumulator + expressions[i - 1] + part;
-  });
+  const result = template.reduce((accumulator, part, i) => accumulator + expressions[i - 1] + part);
   return result.replace(/(\n|\r|\r\n)\s*\|/g, '$1');
 }
 
 function buildLikeKeyboard(movieId, currentLike) {
   return {
     inline_keyboard: [
-      [1,2,3,4,5].map((v) => ({
-        text: currentLike && currentLike.rank === v ? "★".repeat(v) : "☆".repeat(v),
-        callback_data: v + '__' + movieId, // payload that will be retrieved when button is pressed
+      [1, 2, 3, 4, 5].map((v) => ({
+        text: currentLike && currentLike.rank === v ? '★'.repeat(v) : '☆'.repeat(v),
+        callback_data: `${v}__${movieId}`, // payload that will be retrieved when button is pressed
       })),
     ],
-  }
+  };
 }
 
 // User is using the inline query mode on the bot
@@ -45,10 +43,10 @@ bot.on('inline_query', (ctx) => {
             |Year: ${movie.year}
             |Actors: ${movie.actors}
             |Genres: ${movie.genre}
-          `
+          `,
         },
       }));
-      ctx.answerInlineQuery(answer);  
+      ctx.answerInlineQuery(answer);
     });
   }
 });
@@ -60,7 +58,7 @@ bot.on('chosen_inline_result', (ctx) => {
     graphDAO.getMovieLiked(ctx.from.id, ctx.chosenInlineResult.result_id).then((liked) => {
       if (liked !== null) {
         ctx.editMessageReplyMarkup(buildLikeKeyboard(ctx.chosenInlineResult.result_id, liked));
-      }  
+      }
     });
   }
 });
@@ -70,7 +68,7 @@ bot.on('callback_query', (ctx) => {
     const [rank, movieId] = ctx.callbackQuery.data.split('__');
     const liked = {
       rank: parseInt(rank, 10),
-      at: new Date()
+      at: new Date(),
     };
 
     graphDAO.upsertMovieLiked({
@@ -82,10 +80,9 @@ bot.on('callback_query', (ctx) => {
       ...ctx.from,
     }, movieId, liked).then(() => {
       ctx.editMessageReplyMarkup(buildLikeKeyboard(movieId, liked));
-    }); 
+    });
   }
 });
-
 
 bot.command('help', (ctx) => {
   ctx.reply(`
@@ -111,16 +108,15 @@ bot.command('recommendactor', (ctx) => {
       if (records.length === 0) ctx.reply("You haven't liked enough movies to have recommendations");
       else {
         const actorsList = records.map((record) => {
-          const name = record.get('a').properties.name;
+          const { name } = record.get('a').properties;
           const count = record.get('count(*)').toInt();
           return `${name} (${count})`;
-        }).join("\n\t");
+        }).join('\n\t');
         ctx.reply(`Based your like and dislike we recommend the following actor(s):\n\t${actorsList}`);
       }
     });
   }
 });
-
 
 // Initialize mongo connexion
 // before starting bot

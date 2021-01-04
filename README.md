@@ -31,4 +31,17 @@ You can run the bot either in javascript:
 This will make the bot run in active polling mode, which means the bot will 
 
 ## Profit
+```bash
+docker-compose up -V
+# deuxième terminal
+npm run import
+npm start
+```
+Normalement, tout est reset à zero
+### Eslint + webstorm
+ctrl-a > fix eslint problems
 
+Note: specify node version https://www.jetbrains.com/help/idea/node-js-interpreters.html#ws_node_interpreters_dialog_open
+![img.png](img.png)
+Note: fix-on save
+![img_1.png](img_1.png)

@@ -1,7 +1,6 @@
 const { MongoClient } = require('mongodb');
 
 class DocumentDAO {
-
   constructor() {
     this.client = null;
     this.db = null;
@@ -29,7 +28,7 @@ class DocumentDAO {
   }
 
   getMovies(search) {
-    return this.collection.find({ 'title': new RegExp(search) }).limit(10).toArray();
+    return this.collection.find({ title: new RegExp(search) }).limit(10).toArray();
   }
 
   getMovieById(id) {
@@ -41,12 +40,10 @@ class DocumentDAO {
   }
 
   getAllMovies() {
-    return this.collection.find().toArray().then((result) => {
-      return result.map((it) => ({
-        ...it,
-        _id: it._id.toString()
-      }));
-    });
+    return this.collection.find().toArray().then((result) => result.map((it) => ({
+      ...it,
+      _id: it._id.toString(),
+    })));
   }
 }
 
