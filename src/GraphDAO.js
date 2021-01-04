@@ -4,7 +4,7 @@ const neo4j = require('neo4j-driver');
 class GraphDAO {
   
   constructor() {
-    this.driver = neo4j.driver(`bolt://${process.env.GRAPHDB_HOST}`, neo4j.auth.basic('neo4j', process.env.GRAPHDB_PASSWORD));
+    this.driver = neo4j.driver(`bolt://${process.env.GRAPHDB_HOST}`);
   }
 
   prepare() {
