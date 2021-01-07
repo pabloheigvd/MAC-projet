@@ -26,7 +26,7 @@ You first have to register it on Telegram, for this follow the [documentation](h
   to enable active polling on your bot. Don't forget to replace `<YOUR_TOKEN>` by your actual token
  
 ### Running your bot
-You can run the bot either in javascript:
+To run the bot in javascript:
 - In javascript (`/src/index.js`) run `npm start`
 This will make the bot run in active polling mode, which means the bot will 
 
@@ -34,6 +34,7 @@ This will make the bot run in active polling mode, which means the bot will
 ```bash
 docker-compose up -V
 # deuxième terminal
+cd src/
 npm run import
 npm start
 ```
