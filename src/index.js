@@ -1,5 +1,6 @@
 const dotenv = require('dotenv');
 const Telegraf = require('telegraf');
+const fetch = require('node-fetch');
 const DocumentDAO = require('./DocumentDAO');
 const GraphDAO = require('./GraphDAO');
 
@@ -108,7 +109,7 @@ bot.command('recommendactor', (ctx) => {
       if (records.length === 0) ctx.reply("You haven't liked enough movies to have recommendations");
       else {
         const actorsList = records.map((record) => {
-          const { name } = record.get('a').properties;
+          const {name} = record.get('a').properties;
           const count = record.get('count(*)').toInt();
           return `${name} (${count})`;
         }).join('\n\t');
@@ -116,6 +117,105 @@ bot.command('recommendactor', (ctx) => {
       }
     });
   }
+});
+
+async function getAccountId(personaname) {
+  const searchUrl = `https://api.opendota.com/api/search?q=${personaname}`;
+
+  const resp = await fetch(searchUrl);
+  const data = await resp.json();
+  return data[0].account_id; // TODO : account_id du premier user uniquement, voir si possibilité de proposer une liste de choix (users avec le même nom)
+}
+
+async function getRecentMatchData(accountId) {
+  const recentMatchesUrl = `https://api.opendota.com/api/players/${accountId}/recentMatches`;
+
+  const resp = await fetch(recentMatchesUrl);
+  return await resp.json();
+}
+
+function formatMatchData(matchData) {
+  const matchID = matchData.match_id;
+  const playerSlot = matchData.player_slot;
+  const radiantWin = matchData.radiant_win;
+  const {duration} = matchData;
+  const {kills} = matchData;
+  const {deaths} = matchData;
+  const {assists} = matchData;
+  const xpPerMin = matchData.xp_per_min;
+  const goldPerMin = matchData.gold_per_min;
+  const heroDamage = matchData.hero_damage;
+  const towerDamage = matchData.tower_damage;
+  const heroHealing = matchData.hero_healing;
+  const lastHits = matchData.last_hits;
+  // TODO : Ajouter les données utiles
+  /*
+                    duration: 1104,
+                    game_mode: 23,
+                    lobby_type: 0,
+                    hero_id: 34,
+                    start_time: 1609008639,
+                    version: null,
+                    kills: 5,
+                    deaths: 0,
+                    assists: 11,
+                    skill: 1,
+                    xp_per_min: 1743,
+                    gold_per_min: 1156,
+                    hero_damage: 20682,
+                    tower_damage: 95,
+                    hero_healing: 0,
+                    last_hits: 116,
+                    lane: null,
+                    lane_role: null,
+                    is_roaming: null,
+                    cluster: 136,
+                    leaver_status: 0,
+                    party_size: 2
+            */
+
+  return `Match ID : ${matchID} 
+Player Slot : ${playerSlot} 
+Radiant win : ${radiantWin}
+Duration : ${duration}
+Kills : ${kills}
+Deaths : ${deaths}
+Assists : ${assists}
+XP per min. : ${xpPerMin}
+Gold per min. : ${goldPerMin}
+Hero damage : ${heroDamage}
+Tower damage : ${towerDamage}
+Hero healing : ${heroHealing}
+Last hits : ${lastHits}
+Duration : ${duration}\n\n`;
+}
+
+bot.command('playeractivity', (ctx) => {
+  // Récupère la commande et parse le paramètre (personaname = nom du joueur)
+  const msgText = ctx.message.text;
+  const arguments = msgText.split(' ');
+  let personaname;
+  if (arguments[1] != null) {
+    personaname = arguments[1];
+  } else {
+    ctx.reply("Vous devez préciser le nom d'un joueur pour obtenir son activité récente (/playeractivity <nom du joueur>)");
+  }
+
+  let recentMatchData = '';
+
+  getAccountId(personaname).then((accountId) => {
+    getRecentMatchData(accountId).then((recentMatchesData) => {
+      // console.log(recentMatchesData);
+
+      const NB_MATCHES = 5;
+      for (let i = 0; i < NB_MATCHES; ++i) {
+        recentMatchData += formatMatchData(recentMatchesData[i]);
+      }
+      // console.log(recentMatchData);
+
+      ctx.reply(`Last ${NB_MATCHES} matches activity for ${personaname} :\n${recentMatchData}`);
+    });
+  });
 });
 
 // Initialize mongo connexion
