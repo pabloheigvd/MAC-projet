@@ -218,7 +218,7 @@ bot.command('playeractivity', (ctx) => {
   });
 });
 
-bot.command('registeraccount', (ctx) => {
+bot.command('linkaccount', (ctx) => {
   const msgText = ctx.message.text;
   const arguments = msgText.split(' ');
   let personaname;
