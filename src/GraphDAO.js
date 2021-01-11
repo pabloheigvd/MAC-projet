@@ -104,19 +104,19 @@ class GraphDAO {
                     u.firstName = $firstName,
                     u.lastName = $lastName,
                     u.username = $username,
-                    u.languageCode = $languageCode
+                    u.personaname = $personaname
       ON MATCH SET  u.isBot = $isBot,
                     u.firstName = $firstName,
                     u.lastName = $lastName,
                     u.username = $username,
-                    u.languageCode = $languageCode
+                    u.personaname = $personaname
     `, {
       userId: this.toInt(user.id),
       firstName: user.first_name,
       lastName: user.last_name,
       username: user.username,
-      languageCode: user.language_code,
       isBot: user.is_bot,
+      personaname: user.personaname,
     });
   }
 

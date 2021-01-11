@@ -218,6 +218,28 @@ bot.command('playeractivity', (ctx) => {
   });
 });
 
+bot.command('registeraccount', (ctx) => {
+  const msgText = ctx.message.text;
+  const arguments = msgText.split(' ');
+  let personaname;
+  if (arguments[1] != null) {
+    personaname = arguments[1];
+  }
+  //console.log(personaname);
+
+  graphDAO.upsertUser({
+    first_name: 'unknown',
+    last_name: 'unknown',
+    is_bot: false,
+    username: 'unknown',
+    dotaAccount: 'unknownAccount',
+    ...ctx.from,
+    personaname,
+  }).then(() => {
+    ctx.reply(`Telegram user ${ctx.from.username} has been registered with dota account ${personaname}`);
+  });
+});
+
 // Initialize mongo connexion
 // before starting bot
 documentDAO.init().then(() => {
