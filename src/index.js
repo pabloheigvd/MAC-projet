@@ -15,6 +15,8 @@ function stripMargin(template, ...expressions) {
   return result.replace(/(\n|\r|\r\n)\s*\|/g, '$1');
 }
 
+/*
+// FIXME : DELETE -> Adapté pour Dota
 function buildLikeKeyboard(movieId, currentLike) {
   return {
     inline_keyboard: [
@@ -24,8 +26,10 @@ function buildLikeKeyboard(movieId, currentLike) {
       })),
     ],
   };
-}
+}*/
 
+/*
+// FIXME : DELETE -> Adapté pour Dota
 // User is using the inline query mode on the bot
 bot.on('inline_query', (ctx) => {
   const query = ctx.inlineQuery;
@@ -50,8 +54,10 @@ bot.on('inline_query', (ctx) => {
       ctx.answerInlineQuery(answer);
     });
   }
-});
+});*/
 
+/*
+// TODO : nécessaire ?
 // User chose a movie from the list displayed in the inline query
 // Used to update the keyboard and show filled stars if user already liked it
 bot.on('chosen_inline_result', (ctx) => {
@@ -63,7 +69,10 @@ bot.on('chosen_inline_result', (ctx) => {
     });
   }
 });
+*/
 
+/*
+// FIXME : DELETE -> Adapté pour Dota
 bot.on('callback_query', (ctx) => {
   if (ctx.callbackQuery && ctx.from) {
     const [rank, movieId] = ctx.callbackQuery.data.split('__');
@@ -83,7 +92,7 @@ bot.on('callback_query', (ctx) => {
       ctx.editMessageReplyMarkup(buildLikeKeyboard(movieId, liked));
     });
   }
-});
+});*/
 
 bot.command('help', (ctx) => {
   ctx.reply(`
@@ -219,7 +228,7 @@ bot.command('playeractivity', (ctx) => {
 });
 
 /**
- * Réagis à la commande pour lier le compte Telegram au compte Dota (personaname)
+ * Réagit à la commande pour lier le compte Telegram au compte Dota (personaname)
  * Usage : /linkaccount <personaname>
  */
 bot.command('linkaccount', (ctx) => {
@@ -231,23 +240,28 @@ bot.command('linkaccount', (ctx) => {
     personaname = arguments[1];
   }
 
-  // Insère l'utilisateur dans la DB Graph
-  graphDAO.upsertUser({
+  let user = {
     first_name: 'unknown',
     last_name: 'unknown',
     is_bot: false,
     username: 'unknown',
-    dotaAccount: 'unknownAccount',
     ...ctx.from,
     personaname,
-  }).then(() => {
+  }
+
+  // Insère l'utilisateur dans la DB Graph
+  graphDAO.upsertUser(user).then(() => {
     ctx.reply(`Telegram user ${ctx.from.username} has been registered with dota account ${personaname}`);
   });
+
+  // Enregistre aussi l'utilisateur sur MongoDB (pour pouvoir utiliser DocumentDAO.getRegisteredUsers() )
+  documentDAO.insertUser(user);
 });
 
 /**
- * Réagis à la commande pour suivre un compte Telegram associé à un compte Dota
+ * Réagit à la commande pour suivre un compte Telegram associé à un compte Dota
  */
+// FIXME : DELETE -> Fait avec les inline queries
 bot.command('followplayer', (ctx) => {
   // Récupère la commande et parse le paramètre (telegramUsername)
   const msgText = ctx.message.text;
@@ -263,6 +277,68 @@ bot.command('followplayer', (ctx) => {
   })
 
   // TODO : Improve, afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
+});
+
+/**
+ * Réagit à l'utilisation de inline queries ('@<nom du bot> <requête ...>')
+ * Les résultats proposés sont sous la forme :
+ * <Initiale du nom d'utilisateur Telegram> <Telegram username>\n
+ *                                          <personaname du joueur>
+ */
+bot.on('inline_query', (ctx) => {
+  const query = ctx.inlineQuery;
+  if (query) {
+    // Récupère les utilisateurs enregistrés dans MongoDB
+    documentDAO.getRegisteredUsers(query.query).then((users) => {
+      const answer = users.map((user) => ({
+        id: user._id,
+        type: 'article', // Type de résultat inline query affiché (https://core.telegram.org/bots/api#inlinequeryresult)
+        title: user.username, // Titre affiché dans la inline query
+        description: `Dota username : ` + user.personaname, // Description affichée dans la inline query
+        reply_markup: buildFollowKeyboard(user.username),
+        input_message_content: {
+          message_text: stripMargin`
+            |Selected user :
+            |Telegram username: ${user.username}
+            |Dota personaname: ${user.personaname}
+          `, // TODO : Afficher + de stats sur le compte ?
+        },
+      }));
+      ctx.answerInlineQuery(answer);
+    });
+  }
+});
+
+function buildFollowKeyboard(username, isFollowed) {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: !isFollowed ? "Follow ❤ " : "Unfollow 💔 ",
+          callback_data: !isFollowed ? `follow__${username}` : `unfollow__${username}`
+        },// TODO : Afficher 3 boutons au callback : "follow ❤", "unfollow 💔" et "Recommend hero" ? */
+      ]
+    ],
+  };
+}
+
+bot.on('callback_query', (ctx) => {
+  if (ctx.callbackQuery && ctx.from) {
+    const [type, username] = ctx.callbackQuery.data.split('__');
+
+    if (type === "follow") {
+      // Enregistre la relation FOLLOW entre 2 utilisateurs Telegram
+      graphDAO.upsertUserFollowed(ctx.from.id, username).then(() => {
+        ctx.editMessageReplyMarkup(buildFollowKeyboard(username, true));
+        // TODO : Trouver un moyen pour afficher une confirmation de un/follow ou modifier le message existant
+        //ctx.reply(`You are now following Telegram user ${username} !`);
+      })
+    } else if (type === "unfollow") { // Supprime la relation FOLLOW dans le grapge
+      graphDAO.deleteUserFollowing(ctx.from.id, username).then(() => {
+        ctx.editMessageReplyMarkup(buildFollowKeyboard(username, false));
+      })
+    }
+  }
 });
 
 // Initialize mongo connexion

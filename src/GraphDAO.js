@@ -131,6 +131,16 @@ class GraphDAO {
     });
   }
 
+  deleteUserFollowing(userId, followedUsername) {
+    return this.run(`
+      MATCH (User {id: $userId})-[r:FOLLOW]->(User {username: $followedUsername})
+      DELETE r
+    `, {
+      userId,
+      followedUsername,
+    });
+  }
+
   upsertAdded(userId, movieId, added) {
     return this.run(`
       MATCH (m:Movie{ id: $movieId })
