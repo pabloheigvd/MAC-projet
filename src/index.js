@@ -3,6 +3,8 @@ const Telegraf = require('telegraf');
 const fetch = require('node-fetch');
 const DocumentDAO = require('./DocumentDAO');
 const GraphDAO = require('./GraphDAO');
+const Emojis = require("./constants/emojis.js");
+const Heroes = require("./constants/heroes.js");
 
 dotenv.config();
 
@@ -136,13 +138,16 @@ async function getRecentMatchData(accountId) {
 
 // source: https://apps.timwhitlock.info/emoji/tables/unicode
 // take Unicode value
-const moneyBag = "\u{1F4B0}";
+
 
 function formatMatchData(matchData) {
   const matchID = matchData.match_id;
+  // https://docs.opendota.com/#tag/players%2Fpaths%2F~1players~1%7Baccount_id%7D~1recentMatches%2Fget
+  // Which slot the player is in. 0-127 are Radiant, 128-255 are Dire
   const playerSlot = matchData.player_slot;
   const radiantWin = matchData.radiant_win;
   const {duration} = matchData;
+  const {hero_id} = matchData;
   const {kills} = matchData;
   const {deaths} = matchData;
   const {assists} = matchData;
@@ -152,73 +157,56 @@ function formatMatchData(matchData) {
   const towerDamage = matchData.tower_damage;
   const heroHealing = matchData.hero_healing;
   const lastHits = matchData.last_hits;
-  // TODO : Ajouter les données utiles
-  /*
-                    duration: 1104,
-                    game_mode: 23,
-                    lobby_type: 0,
-                    hero_id: 34,
-                    start_time: 1609008639,
-                    version: null,
-                    kills: 5,
-                    deaths: 0,
-                    assists: 11,
-                    skill: 1,
-                    xp_per_min: 1743,
-                    gold_per_min: 1156,
-                    hero_damage: 20682,
-                    tower_damage: 95,
-                    hero_healing: 0,
-                    last_hits: 116,
-                    lane: null,
-                    lane_role: null,
-                    is_roaming: null,
-                    cluster: 136,
-                    leaver_status: 0,
-                    party_size: 2
-            */
 
-  return `Match ID : ${matchID} 
-    Player Slot : ${playerSlot} 
-    Radiant win : ${radiantWin}
-    Duration : ${duration}
-    Kills : ${kills}
-    Deaths : ${deaths}
-    Assists : ${assists}
-    XP per min. : ${xpPerMin}` +
-    moneyBag + `Gold per min. : ${goldPerMin}
-    Hero damage : ${heroDamage}
-    Tower damage : ${towerDamage}
-    Hero healing : ${heroHealing}
-    Last hits : ${lastHits}
-    Duration : ${duration}\n\n`;
+  const isPlayerRadiant = playerSlot < 128;
+  const hasPlayerWon = (isPlayerRadiant && radiantWin) || (!isPlayerRadiant && !radiantWin)
+  const winLose = hasPlayerWon ? "won" : "lost";
+  const winner = radiantWin ? "radiant" : "dire";
+
+  const hero = Heroes.heroes.find(e => e.id === hero_id);
+
+  const text = `[Match link](https://www.opendota.com/matches/${matchID})\n`+
+      Emojis.cup + winLose + ` as ${winner}\n` +
+      Emojis.player + ` played as ${hero.localized_name}\n` +
+      Emojis.feed + ` K/D/A : ${kills}/${deaths}/${assists}\n` +
+      Emojis.expDiamond + ` XP per min : ${xpPerMin}\n` +
+      Emojis.moneyBag + ` Gold per min : ${goldPerMin}\n` +
+      Emojis.target + ` Hero damage : ${heroDamage}\n` +
+      Emojis.castle + ` Tower damage : ${towerDamage}\n` +
+      Emojis.pill + ` Hero healing : ${heroHealing}\n` +
+      Emojis.coin + ` Last hits : ${lastHits}\n` +
+      Emojis.time + ` Duration : ${duration}\n---\n`;
+
+  return {text: text, win: hasPlayerWon ? 1 : 0};
 }
 
 bot.command('playeractivity', (ctx) => {
-  // TODO better formatting
   // Récupère la commande et parse le paramètre (personaname = nom du joueur)
   const msgText = ctx.message.text;
   const arguments = msgText.split(' ');
-  let personaname;
-  if (arguments[1] != null) {
-    personaname = arguments[1];
+  let personName;
+  // https://www.opendota.com/players/103367483
+  // using the numbers here works
+  if (arguments.length > 1 && arguments[1] != null) {
+    personName = arguments[1];
   } else {
-    ctx.reply("Vous devez préciser le nom d'un joueur pour obtenir son activité récente (/playeractivity <nom du joueur>)");
+    ctx.reply("Vous devez préciser le nom d'un joueur pour obtenir son activité récente (/playeractivity <steam32 id>)");
+    return;
   }
 
-  let recentMatchData = '';
-
-  getAccountId(personaname).then((accountId) => {
+  getAccountId(personName).then((accountId) => {
     getRecentMatchData(accountId).then((recentMatchesData) => {
-      // console.log(recentMatchesData);
-
       const NB_MATCHES = 5;
+      var output = "";
+      var wins = 0;
       for (let i = 0; i < NB_MATCHES; ++i) {
-        recentMatchData += formatMatchData(recentMatchesData[i]);
+        const match = formatMatchData(recentMatchesData[i])
+        output += match.text;
+        wins += match.win;
       }
-      // console.log(recentMatchData);
-
-      ctx.reply(`Last ${NB_MATCHES} matches activity for ${personaname} :\n${recentMatchData}`);
+      output += `Has won ${wins}/${NB_MATCHES} of his recent matches`
+      // note: * bold * works
+      ctx.reply(text=`Last ${NB_MATCHES} matches activity for ${personName} :\n${output}`, {parse_mode: 'markdown'});
     });
   });
 });
