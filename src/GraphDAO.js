@@ -120,6 +120,17 @@ class GraphDAO {
     });
   }
 
+  upsertUserFollowed(userId, followedUsername) {
+    return this.run(`
+      MATCH (f:User {username: $followedUsername})
+        MERGE (u:User {id: $userId})
+        MERGE (u)-[r:FOLLOW]->(f)
+    `, {
+      userId,
+      followedUsername,
+    });
+  }
+
   upsertAdded(userId, movieId, added) {
     return this.run(`
       MATCH (m:Movie{ id: $movieId })

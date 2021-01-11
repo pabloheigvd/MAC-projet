@@ -9,13 +9,14 @@ const GraphDAO = require('./GraphDAO');
 
 dotenv.config();
 
-const buildUser = (id, username, first_name, last_name, language_code, is_bot) => ({
+const buildUser = (id, username, first_name, last_name, language_code, is_bot, personaname) => ({
   id,
   username,
   first_name,
   last_name,
   language_code,
   is_bot,
+  personaname,
 });
 
 const shuffle = (array) => {
@@ -38,11 +39,11 @@ const parseMovies = () => new Promise((resolve) => {
 });
 
 const users = [
-  buildUser(220987852, 'ovesco', 'guillaume', '', 'fr', false),
-  buildUser(136451861, 'thrudhvangr', 'christopher', '', 'fr', false),
-  buildUser(136451862, 'NukedFace', 'marcus', '', 'fr', false),
-  buildUser(136451863, 'lauralol', 'laura', '', 'fr', false),
-  buildUser(136451864, 'Saumonlecitron', 'jean-michel', '', 'fr', false),
+  buildUser(220987852, 'ovesco', 'guillaume', '', 'fr', false, 'sierra'),
+  buildUser(136451861, 'thrudhvangr', 'christopher', '', 'fr', false, 'sierra'),
+  buildUser(136451862, 'NukedFace', 'marcus', '', 'fr', false, 'sierra'),
+  buildUser(136451863, 'lauralol', 'laura', '', 'fr', false, 'sierra'),
+  buildUser(136451864, 'Saumonlecitron', 'jean-michel', 'fr', 'fr', false, 'sierra'),
 ];
 
 const graphDAO = new GraphDAO();

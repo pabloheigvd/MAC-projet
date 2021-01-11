@@ -218,15 +218,20 @@ bot.command('playeractivity', (ctx) => {
   });
 });
 
+/**
+ * Réagis à la commande pour lier le compte Telegram au compte Dota (personaname)
+ * Usage : /linkaccount <personaname>
+ */
 bot.command('linkaccount', (ctx) => {
+  // Récupère la commande et parse le paramètre (personaname = nom du joueur)
   const msgText = ctx.message.text;
   const arguments = msgText.split(' ');
   let personaname;
   if (arguments[1] != null) {
     personaname = arguments[1];
   }
-  //console.log(personaname);
 
+  // Insère l'utilisateur dans la DB Graph
   graphDAO.upsertUser({
     first_name: 'unknown',
     last_name: 'unknown',
@@ -238,6 +243,26 @@ bot.command('linkaccount', (ctx) => {
   }).then(() => {
     ctx.reply(`Telegram user ${ctx.from.username} has been registered with dota account ${personaname}`);
   });
+});
+
+/**
+ * Réagis à la commande pour suivre un compte Telegram associé à un compte Dota
+ */
+bot.command('followplayer', (ctx) => {
+  // Récupère la commande et parse le paramètre (telegramUsername)
+  const msgText = ctx.message.text;
+  const arguments = msgText.split(' ');
+  let telegramUsername;
+  if (arguments[1] != null) {
+    telegramUsername = arguments[1];
+  }
+
+  // Enregistre la relation FOLLOWING entre 2 utilisateurs Telegram
+  graphDAO.upsertUserFollowed(ctx.from.id, telegramUsername).then(() => {
+    ctx.reply(`You are now following Telegram user ${telegramUsername} !`);
+  })
+
+  // TODO : Improve, afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
 });
 
 // Initialize mongo connexion
