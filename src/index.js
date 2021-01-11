@@ -136,6 +136,12 @@ async function getRecentMatchData(accountId) {
   return await resp.json();
 }
 
+async function getPlayerName(accountId) {
+  const playerName = `https://api.opendota.com/api/players/${accountId}`;
+  const resp = await fetch(playerName);
+  return await resp.json();
+}
+
 // source: https://apps.timwhitlock.info/emoji/tables/unicode
 // take Unicode value
 
@@ -196,17 +202,22 @@ bot.command('playeractivity', (ctx) => {
 
   getAccountId(personName).then((accountId) => {
     getRecentMatchData(accountId).then((recentMatchesData) => {
-      const NB_MATCHES = 5;
-      var output = "";
-      var wins = 0;
-      for (let i = 0; i < NB_MATCHES; ++i) {
-        const match = formatMatchData(recentMatchesData[i])
-        output += match.text;
-        wins += match.win;
-      }
-      output += `Has won ${wins}/${NB_MATCHES} of his recent matches`
-      // note: * bold * works
-      ctx.reply(text=`Last ${NB_MATCHES} matches activity for ${personName} :\n${output}`, {parse_mode: 'markdown'});
+      getPlayerName(accountId).then((personFullName) => {
+        let personaname = personFullName.profile.personaname;
+        let person = `[${personaname}](https://www.opendota.com/players/${accountId})`;
+        const NB_MATCHES = 5;
+        var output = "";
+        var wins = 0;
+        for (let i = 0; i < NB_MATCHES; ++i) {
+          const match = formatMatchData(recentMatchesData[i]);
+          output += match.text;
+          wins += match.win;
+        }
+        output += `${person} has won ${wins}/${NB_MATCHES} of his recent matches`;
+
+        // note: * bold * works
+        ctx.reply(text=`Last ${NB_MATCHES} matches activity for ${person} :\n${output}`, {parse_mode: 'markdown'});
+      });
     });
   });
 });
