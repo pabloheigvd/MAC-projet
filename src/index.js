@@ -134,6 +134,10 @@ async function getRecentMatchData(accountId) {
   return await resp.json();
 }
 
+// source: https://apps.timwhitlock.info/emoji/tables/unicode
+// take Unicode value
+const moneyBag = "\u{1F4B0}";
+
 function formatMatchData(matchData) {
   const matchID = matchData.match_id;
   const playerSlot = matchData.player_slot;
@@ -175,22 +179,23 @@ function formatMatchData(matchData) {
             */
 
   return `Match ID : ${matchID} 
-Player Slot : ${playerSlot} 
-Radiant win : ${radiantWin}
-Duration : ${duration}
-Kills : ${kills}
-Deaths : ${deaths}
-Assists : ${assists}
-XP per min. : ${xpPerMin}
-Gold per min. : ${goldPerMin}
-Hero damage : ${heroDamage}
-Tower damage : ${towerDamage}
-Hero healing : ${heroHealing}
-Last hits : ${lastHits}
-Duration : ${duration}\n\n`;
+    Player Slot : ${playerSlot} 
+    Radiant win : ${radiantWin}
+    Duration : ${duration}
+    Kills : ${kills}
+    Deaths : ${deaths}
+    Assists : ${assists}
+    XP per min. : ${xpPerMin}` +
+    moneyBag + `Gold per min. : ${goldPerMin}
+    Hero damage : ${heroDamage}
+    Tower damage : ${towerDamage}
+    Hero healing : ${heroHealing}
+    Last hits : ${lastHits}
+    Duration : ${duration}\n\n`;
 }
 
 bot.command('playeractivity', (ctx) => {
+  // TODO better formatting
   // Récupère la commande et parse le paramètre (personaname = nom du joueur)
   const msgText = ctx.message.text;
   const arguments = msgText.split(' ');
