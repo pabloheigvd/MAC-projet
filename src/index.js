@@ -279,6 +279,41 @@ bot.command('followplayer', (ctx) => {
   // TODO : Improve, afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
 });
 
+bot.command('recommendhero', (ctx) => {
+
+  //Get friends
+  //graphDAO.select
+  if (ctx.from) {
+    graphDAO.getFriends(ctx.from.id).then((friend) => {
+      //if (friend !== null) {
+      //  console.log(friend.record)
+      //  ctx.reply(`You are friend with Telegram user ${friend} !`);
+      //}
+      if (friend !== null) {
+        for (i = 0; i < friend.record.length; ++i){
+          console.log(friend.record[i].get('u'));
+          ctx.reply(`You are friend with Telegram user ${friend.record[i].get('u').properties.username}  !`); //${friend[i].name}
+        }
+      }else{
+        ctx.reply(friend);
+      }
+    });
+  }
+  /*
+    if (ctx.from) {
+    graphDAO.getFriends(ctx.from.id).then((friend) => {
+      if (friend !== null) {
+        for (i = 0; i < friend.length; ++i){
+          ctx.reply(`You are friend with Telegram user ${friend[i].name} !`);
+        }
+      }else{
+        ctx.reply(friend);
+      }
+    });
+   */
+
+});
+
 /**
  * Réagit à l'utilisation de inline queries ('@<nom du bot> <requête ...>')
  * Les résultats proposés sont sous la forme :
