@@ -284,16 +284,48 @@ bot.command('recommendhero', (ctx) => {
   //Get friends
   //graphDAO.select
   if (ctx.from) {
+
     graphDAO.getFriends(ctx.from.id).then((friend) => {
       //if (friend !== null) {
       //  console.log(friend.record)
       //  ctx.reply(`You are friend with Telegram user ${friend} !`);
       //}
       if (friend !== null) {
+        console.log("MON ID" + ctx.from.id);
+
+        let set = new Set();
+        // first level of relation
+        //friend.record.map((x)=> set.add(x));
+
+        friend.record.map((x)=> console.log("here" + x));
+
+        //second level of relation (if exists)
+        friend.record.map((x)=> graphDAO.getFriends(x).then((secondFriend) => {
+          if(secondFriend != null) {
+            for (i = 0; i<secondFriend.record.length; ++i){
+              set.add(secondFriend.record[i])
+            }
+            /*
+            secondFriend.record.map((y) => {
+              console.log("second friend" + y)
+              set.add(y)
+              //console.log(set)
+            });
+             */
+          }
+        }))
+        console.log(set)
+        //${friend[i].name})
+        //console.log(set);
+
+
+        // ....
+
         for (i = 0; i < friend.record.length; ++i){
-          console.log(friend.record[i].get('u'));
-          ctx.reply(`You are friend with Telegram user ${friend.record[i].get('u').properties.username}  !`); //${friend[i].name}
+          //console.log(friend.record[i]);
+          ctx.reply(`You are friend with Telegram user ${friend.record[i]}  !`); //${friend[i].name}
         }
+
       }else{
         ctx.reply(friend);
       }
