@@ -204,10 +204,11 @@ bot.command('playeractivity', (ctx) => {
   const msgText = ctx.message.text;
   const arguments = msgText.split(' ');
   let personaname;
-  if (arguments[1] != null) {
+  if (arguments.length === 2) {
     personaname = arguments[1];
   } else {
-    ctx.reply("Vous devez préciser le nom d'un joueur pour obtenir son activité récente (/playeractivity <nom du joueur>)");
+    ctx.reply("Usage is '/playeractivity <personaname>'");
+    return;
   }
 
   let recentMatchData = '';
@@ -236,8 +237,11 @@ bot.command('linkaccount', (ctx) => {
   const msgText = ctx.message.text;
   const arguments = msgText.split(' ');
   let personaname;
-  if (arguments[1] != null) {
+  if (arguments.length === 2) {
     personaname = arguments[1];
+  } else {
+    ctx.reply("Usage is '/linkaccount <personaname>'");
+    return;
   }
 
   let user = {
@@ -267,8 +271,11 @@ bot.command('followplayer', (ctx) => {
   const msgText = ctx.message.text;
   const arguments = msgText.split(' ');
   let telegramUsername;
-  if (arguments[1] != null) {
+  if (arguments.length === 2) {
     telegramUsername = arguments[1];
+  } else {
+    ctx.reply("Usage is '/followplayer <Telegram username>'");
+    return;
   }
 
   // Enregistre la relation FOLLOWING entre 2 utilisateurs Telegram
