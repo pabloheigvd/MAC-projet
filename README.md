@@ -18,12 +18,12 @@ If you want to use docker, make sure it is installed on your machine, and then r
 ### Registering the bot
 You first have to register it on Telegram, for this follow the [documentation](https://core.telegram.org/bots).
 - Register your bot on BotFather
-- Register two commands:
+- Register these commands:
   - `help` - Provides some help to use the bot
   - `recommendactors` - Tries to recommend actors based on user preferences
   - `playeractivity` - Shows recent match activity for a given player
   - `linkaccount` - Allows a Telegram user to link his Dota account
-  - `followplayer` - 
+  - `followplayer` - Follow a Telegram user in the discussion (or using inline query)
   - `showfollowings` -
   - `recommendhero` - 
 - run `/setinline` and `/setinlinefeedback` for the bot to be able to answer inline queries
