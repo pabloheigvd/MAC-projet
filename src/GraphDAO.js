@@ -150,7 +150,7 @@ class GraphDAO {
     }).then((res) => {
       if (res.records.length === 0) return null;
 
-      return res.records.map((record) => record.get('u').properties.id.low);
+      return res.records.map((record) => record.get('u').properties);
     });
   }
 

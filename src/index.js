@@ -143,6 +143,13 @@ async function getRecentMatchData(accountId) {
   return await resp.json();
 }
 
+async function getHeroName(heroId) {
+  const recentMatchesUrl = `https://api.opendota.com/api/heroStats`;
+
+  const resp = await fetch(recentMatchesUrl);
+  return await resp.json();
+}
+
 function formatMatchData(matchData) {
   const matchID = matchData.match_id;
   const playerSlot = matchData.player_slot;
@@ -352,37 +359,57 @@ bot.on('callback_query', (ctx) => {
 });
 
 bot.command('recommendhero', (ctx) => {
-  let secondLevelFriendsSet = new Set();
+  let friendsSet = new Set();
+  let recentHeroes = new Set();
+  let recommendedHeroes = new Set();
+  let displayHeroes = '';
 
   graphDAO.getFollowedPlayer(ctx.from.id).then(firstLevelFriends => {
     //console.log("FIRST");
     //console.log(firstLevelFriends);
 
-    firstLevelFriends.forEach(userId => {
-      graphDAO.getFollowedPlayer(userId).then(secondLevelFriends => {
+    // Stocke les amis de 1er niveau
+    firstLevelFriends.forEach(friend => {
+      friendsSet.add(friend)
+
+      graphDAO.getFollowedPlayer(friend.id.low).then(secondLevelFriends => {
         //console.log("SECOND");
         //console.log(secondLevelFriends);
 
-        secondLevelFriendsSet.add(secondLevelFriends);
         //console.log(secondLevelFriendsSet);
 
-        secondLevelFriendsSet.forEach(userId => {
-          getRecentMatchData(userId).then((recentMatchesData) => {
-            console.log(recentMatchesData);
-            /*
-                        const NB_MATCHES = 5;
-                        for (let i = 0; i < NB_MATCHES; ++i) {
-                          recentMatchData += formatMatchData(recentMatchesData[i]);
-                        }
-                        // console.log(recentMatchData);
-            */
+        // Stocke les amis de 2ème niveau
+        secondLevelFriends.forEach(friend => {
+          friendsSet.add(friend);
+
+          // Obtient les données des 30 derniers matchs
+          getRecentMatchData(friend.accountId).then(recentMatchesData => {
+            //console.log(recentMatchesData);
+
+            // Stocke les ID des héros
+            recentMatchesData.forEach(match => {
+              recentHeroes.add(match.hero_id);
+            });
+
+            // Cherche le nom du héro à partir de son ID
+            recentHeroes.forEach(heroId => {
+              getHeroName(heroId).then(results => {
+                results.forEach(hero => {
+
+                  // Stocke le nom du héro pour l'afficher à l'utilisateur
+                  if (heroId === hero.id) {
+                    //console.log(hero.localized_name);
+                    recommendedHeroes.add(hero.localized_name);
+                  }
+                });
+
+                console.log(recommendedHeroes);
+              });
+            });
           });
-
-
         });
       });
     });
-
   });
 });
 
