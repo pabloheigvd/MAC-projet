@@ -104,12 +104,14 @@ class GraphDAO {
                     u.firstName = $firstName,
                     u.lastName = $lastName,
                     u.username = $username,
-                    u.personaname = $personaname
+                    u.personaname = $personaname,
+                    u.accountId = $accountId
       ON MATCH SET  u.isBot = $isBot,
                     u.firstName = $firstName,
                     u.lastName = $lastName,
                     u.username = $username,
-                    u.personaname = $personaname
+                    u.personaname = $personaname,
+                    u.accountId = $accountId
     `, {
       userId: this.toInt(user.id),
       firstName: user.first_name,
@@ -117,6 +119,7 @@ class GraphDAO {
       username: user.username,
       isBot: user.is_bot,
       personaname: user.personaname,
+      accountId: user.accountId,
     });
   }
 
@@ -138,6 +141,16 @@ class GraphDAO {
     `, {
       userId,
       followedUsername,
+    });
+  }
+
+  getFollowedPlayer(userId) {
+    return this.run('MATCH (User{id: $userId})-[FOLLOW]->(u:User) RETURN u', {
+      userId,
+    }).then((res) => {
+      if (res.records.length === 0) return null;
+
+      return res.records.map((record) => record.get('u').properties.id.low);
     });
   }
 

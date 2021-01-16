@@ -244,22 +244,25 @@ bot.command('linkaccount', (ctx) => {
     return;
   }
 
-  let user = {
-    first_name: 'unknown',
-    last_name: 'unknown',
-    is_bot: false,
-    username: 'unknown',
-    ...ctx.from,
-    personaname,
-  }
+  getAccountId(personaname).then(accountId => {
+    let user = {
+      first_name: 'unknown',
+      last_name: 'unknown',
+      is_bot: false,
+      username: 'unknown',
+      ...ctx.from,
+      personaname,
+      accountId,
+    }
 
-  // Insère l'utilisateur dans la DB Graph
-  graphDAO.upsertUser(user).then(() => {
-    ctx.reply(`Telegram user ${ctx.from.username} has been registered with dota account ${personaname}`);
+    // Insère l'utilisateur dans la DB Graph
+    graphDAO.upsertUser(user).then(() => {
+      ctx.reply(`Telegram user ${ctx.from.username} has been registered with dota account ${personaname}`);
+    });
+
+    // Enregistre aussi l'utilisateur sur MongoDB (pour pouvoir utiliser DocumentDAO.getRegisteredUsers() )
+    documentDAO.insertUser(user);
   });
-
-  // Enregistre aussi l'utilisateur sur MongoDB (pour pouvoir utiliser DocumentDAO.getRegisteredUsers() )
-  documentDAO.insertUser(user);
 });
 
 /**
@@ -346,6 +349,41 @@ bot.on('callback_query', (ctx) => {
       })
     }
   }
+});
+
+bot.command('recommendhero', (ctx) => {
+  let secondLevelFriendsSet = new Set();
+
+  graphDAO.getFollowedPlayer(ctx.from.id).then(firstLevelFriends => {
+    //console.log("FIRST");
+    //console.log(firstLevelFriends);
+
+    firstLevelFriends.forEach(userId => {
+      graphDAO.getFollowedPlayer(userId).then(secondLevelFriends => {
+        //console.log("SECOND");
+        //console.log(secondLevelFriends);
+
+        secondLevelFriendsSet.add(secondLevelFriends);
+        //console.log(secondLevelFriendsSet);
+
+        secondLevelFriendsSet.forEach(userId => {
+          getRecentMatchData(userId).then((recentMatchesData) => {
+            console.log(recentMatchesData);
+            /*
+                        const NB_MATCHES = 5;
+                        for (let i = 0; i < NB_MATCHES; ++i) {
+                          recentMatchData += formatMatchData(recentMatchesData[i]);
+                        }
+                        // console.log(recentMatchData);
+            */
+          });
+
+
+        });
+      });
+    });
+
+  });
 });
 
 // Initialize mongo connexion

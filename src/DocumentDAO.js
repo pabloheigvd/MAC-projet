@@ -32,11 +32,13 @@ class DocumentDAO {
       {
         $set:
           {
+            id: user.id,
             is_bot: user.is_bot,
             first_name: user.first_name,
             last_name: user.last_name,
             username: user.username,
             personaname: user.personaname,
+            accountId: user.accountId,
           },
       }, { upsert: true });
   }
