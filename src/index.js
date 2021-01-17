@@ -447,30 +447,53 @@ bot.command('recommendhero', (ctx) => {
         })).then(() => {
             console.log("set", set);
 
+            let heroesToRecommend = [];
+
             // Parcourt tous les amis
+            let ps = [];
+
             set.forEach((user) => {
               ctx.reply(`You are friend with Telegram user ${user.username}`);
 
-              // Obtient les données des matchs récents
-              getRecentMatchData(user.accountId).then((data) => {
-                // console.log(data);
+              let p = getRecentMatchData(user.accountId);
+              ps.push(p);
+            });
 
-                let heroIds = [];
-                for (let a of data) {
-                  heroIds.push(a.hero_id);
+            // let heroIds = [];
+            // for (let a of data) {
+            //   heroIds.push(a.hero_id);
+            // }
+            //
+            // let heroNames = [];
+            // heroIds.forEach((id) => {
+            //   const hero = Heroes.heroes.find(e => e.id === id);
+            //   heroNames.push(hero.localized_name);
+            // })
+            //
+            // heroesToRecommend = heroesToRecommend.concat(heroNames);
+
+            Promise.all(ps).then(playerMatches => {
+              // console.log(playerMatches); // map data tous
+              // console.log(playerMatches.length);
+              playerMatches = playerMatches.flat(); // all matches
+              // console.log(playerMatches.length);
+              // console.log(playerMatches[0]);
+              let heroIds = {};
+              console.log(playerMatches);
+              playerMatches = playerMatches.map(m => m.hero_id); // id of heroes used
+              playerMatches.forEach(id => {
+                if (typeof heroIds[id] === 'undefined'){
+                  heroIds[id] = 1;
+                } else {
+                  heroIds[id]++;
                 }
-
-                let heroNames = [];
-                heroIds.forEach((id) => {
-                  const hero = Heroes.heroes.find(e => e.id === id);
-                  heroNames.push(hero.localized_name);
-                })
-
-                heroNames.map((x) => [x, 1]).reduce(+)
-
-                heroNames.forEach(name => console.log(name))
-              })
-            })
+              });
+              console.log(heroIds);
+            // .forEach((id) => {
+            //     const hero = Heroes.heroes.find(e => e.id === id);
+            //     heroNames.push(hero.localized_name);
+            //   });
+            });
           }
         )
       } else {
