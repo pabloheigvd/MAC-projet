@@ -64,6 +64,29 @@ class GraphDAO {
     });
   }
 
+  getFriends(userId) {
+    return this.run('MATCH (:User{id: $userId})-[l:FOLLOW]->(u:User) RETURN u', {
+      userId,
+    }).then((res) => {
+      if (res.records.length === 0) return null;
+
+      const record = res.records.map((x) => x.get('u').properties.id.low); // low ???
+
+      /*
+      const record = res.records.map((x) => {
+        if (userId !== x.get('u').properties.id.low) {
+          return x.get('u').properties.id.low;
+        }
+      });
+       */
+
+      // const record = res.records;
+      return {
+        record,
+      };
+    });
+  }
+
   upsertMovie(movieId, movieTitle) {
     return this.run('MERGE (m:Movie{id: $movieId}) ON CREATE SET m.title = $movieTitle RETURN m', {
       movieId,

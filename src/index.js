@@ -296,6 +296,51 @@ bot.command('followplayer', (ctx) => {
   // TODO : Improve, afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
 });
 
+bot.command('recommendhero', (ctx) => {
+
+  //Get friends
+  //graphDAO.select
+  if (ctx.from) {
+
+    graphDAO.getFriends(ctx.from.id).then((friend) => {
+      if (friend !== null) {
+        console.log("MON ID - ",ctx.from.id);
+
+        let set = new Set();
+        // first level of relation
+        friend.record.map((x)=> set.add(x));
+
+        friend.record.map((x)=> console.log("1 level of friends - ",x));
+
+        //second level of relation (if exists)
+        let friendsRelationship = friend.record.map((x)=> graphDAO.getFriends(x).then((secondFriend) => {
+          if(secondFriend != null) {
+            return secondFriend.record.map((y) => y);
+          }
+        }))
+
+        Promise.all(friendsRelationship).then(x => console.log(x.map(z => z)));
+
+        Promise.all(friendsRelationship).then(x => x.filter(y => y!== undefined).map(z => {
+          z.map(v => set.add(v));
+        })).then(() => {
+          console.log("ONLY ONCE");
+          console.log("set",set);
+          set.forEach((id) => {
+            ctx.reply(`You are friend with Telegram user ${id}  !`);
+          })
+          // CONTINUER LA LOGIQUE
+        });
+
+        // aussi ici ??
+
+      }else{
+        ctx.reply(friend);
+      }
+    });
+  }
+});
+
 /**
  * Réagit à l'utilisation de inline queries ('@<nom du bot> <requête ...>')
  * Les résultats proposés sont sous la forme :
