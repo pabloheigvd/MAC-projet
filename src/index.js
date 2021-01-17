@@ -295,36 +295,52 @@ bot.command('recommendhero', (ctx) => {
 
         let set = new Set();
         // first level of relation
-        //friend.record.map((x)=> set.add(x));
+        friend.record.map((x)=> set.add(x));
 
         friend.record.map((x)=> console.log("here" + x));
 
         //second level of relation (if exists)
-        friend.record.map((x)=> graphDAO.getFriends(x).then((secondFriend) => {
+        let test = friend.record.map((x)=> graphDAO.getFriends(x).then((secondFriend) => {
           if(secondFriend != null) {
-            for (i = 0; i<secondFriend.record.length; ++i){
-              set.add(secondFriend.record[i])
-            }
-            /*
-            secondFriend.record.map((y) => {
-              console.log("second friend" + y)
-              set.add(y)
-              //console.log(set)
-            });
-             */
+            return secondFriend.record.map((y) => 10);
           }
         }))
-        console.log(set)
+
+        console.log("teeeeeeest",test);
+
+        Promise.all(test).then(x => x.filter(y => y!== undefined).map(z => {
+          z.map(v => set.add(v));
+          console.log("HOPPE",set);
+
+        }));
+
+
+        //console.log("dddddddddd", dd);
+
+        /*
+        test.forEach((x) => {
+        x.then(function(result){
+          //set.add(result);
+          console.log(result);
+        });
+        })
+         */
+
+        console.log("set");
+        console.log(set);
+
+        //console.log(set)
         //${friend[i].name})
         //console.log(set);
 
 
         // ....
-
+        /*
         for (i = 0; i < friend.record.length; ++i){
           //console.log(friend.record[i]);
           ctx.reply(`You are friend with Telegram user ${friend.record[i]}  !`); //${friend[i].name}
         }
+      */
 
       }else{
         ctx.reply(friend);
