@@ -36,10 +36,15 @@ documentDAO.init().then(() => {
   console.log('Preparing Neo4j');
   graphDAO.prepare().then(() => {
     console.log('Writing users to neo4j');
-    Promise.all(users.map((user) => {
-      graphDAO.upsertUser(user);
-      documentDAO.insertUser(user);
-    })).then(() => {
+    Promise.all(users.map((user) => graphDAO.upsertUser(user))).then(() => {
+      Promise.all(users.map((user) => documentDAO.insertUser(user))).then(() => {
+        Promise.all([
+          documentDAO.close(),
+          graphDAO.close(),
+        ]).then(() => {
+          console.log('Done with importation');
+        });
+      });
     });
   });
 });

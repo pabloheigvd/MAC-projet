@@ -250,11 +250,14 @@ bot.command('unfollowplayer', (ctx) => {
 bot.command('showfollowings', (ctx) => {
   graphDAO.getFriends(ctx.from.id).then((friends) => {
     let friendsList = '';
-    friends.forEach(friend => {
-      friendsList += '  - ' + friend.username + ' aka ' + friend.personaname + '\n';
-    })
-
-    ctx.reply(`Here's your friends list :\n${friendsList}`)
+    if (friends !== null) {
+      friends.forEach(friend => {
+        friendsList += '  - ' + friend.username + ' aka ' + friend.personaname + '\n';
+      })
+      ctx.reply(`Here's your friends list :\n${friendsList}`)
+    } else {
+      ctx.reply(`You have no friends yet` + Emojis.faceCrying + ` Add some with the '/followplayer command'`)
+    }
   })
 });
 
