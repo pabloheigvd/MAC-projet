@@ -30,6 +30,16 @@ You first have to register it on Telegram, for this follow the [documentation](h
 - copy the token the botfather gave you and go to `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
   to enable active polling on your bot. Don't forget to replace `<YOUR_TOKEN>` by your actual token
  
+This are the commands you need to register:
+```
+help - help
+linkaccount - link your open dota account
+followplayer - follow a player (e.g. player id)
+showfollowings - show all followed players
+playeractivity - show the dota activity of a specified player (e.g. player id)
+recommendhero - recommend a hero
+```
+
 ### Running your bot
 To run the bot in javascript:
 - In javascript (`/src/index.js`) run `npm start`
