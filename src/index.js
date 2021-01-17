@@ -207,7 +207,7 @@ bot.command('playeractivity', (ctx) => {
   } else {
     ctx.reply("Vous devez préciser le nom d'un joueur pour obtenir son activité récente (/playeractivity <steam32 id>)");
     return;
-
+  }
 
   getAccountId(personName).then((accountId) => {
     getRecentMatchData(accountId).then((recentMatchesData) => {
