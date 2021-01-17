@@ -452,19 +452,22 @@ bot.command('recommendhero', (ctx) => {
               ctx.reply(`You are friend with Telegram user ${user.username}`);
 
               // Obtient les données des matchs récents
-              let matchData = getRecentMatchData(user.accountId).then((data) => {
+              getRecentMatchData(user.accountId).then((data) => {
                 // console.log(data);
 
-                let heroIds = new Set();
+                let heroIds = [];
                 for (let a of data) {
-                  heroIds.add(a.hero_id);
+                  heroIds.push(a.hero_id);
                 }
 
-                let heroNames = new Set();
+                let heroNames = [];
                 heroIds.forEach((id) => {
                   const hero = Heroes.heroes.find(e => e.id === id);
-                  heroNames.add(hero.localized_name);
+                  heroNames.push(hero.localized_name);
                 })
+
+                heroNames.map((x) => [x, 1]).reduce(+)
+
                 heroNames.forEach(name => console.log(name))
               })
             })
