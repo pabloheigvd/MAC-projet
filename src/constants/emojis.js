@@ -11,6 +11,9 @@ const player = '\u{1F3AE}';
 const faceStars = '\u{1F929}';
 const faceCrying = '\u{1F62D}';
 
+// source: https://apps.timwhitlock.info/emoji/tables/unicode
+// take Unicode value
+
 module.exports = {
   moneyBag, expDiamond, feed, target, castle, time, coin, cup, pill, player, faceStars, faceCrying,
 };

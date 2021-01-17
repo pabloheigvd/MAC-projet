@@ -17,127 +17,49 @@ function stripMargin(template, ...expressions) {
   return result.replace(/(\n|\r|\r\n)\s*\|/g, '$1');
 }
 
-/*
-// FIXME : DELETE -> Adapté pour Dota
-function buildLikeKeyboard(movieId, currentLike) {
-  return {
-    inline_keyboard: [
-      [1, 2, 3, 4, 5].map((v) => ({
-        text: currentLike && currentLike.rank === v ? '★'.repeat(v) : '☆'.repeat(v),
-        callback_data: `${v}__${movieId}`, // payload that will be retrieved when button is pressed
-      })),
-    ],
-  };
-}*/
-
-/*
-// FIXME : DELETE -> Adapté pour Dota
-// User is using the inline query mode on the bot
-bot.on('inline_query', (ctx) => {
-  const query = ctx.inlineQuery;
-  if (query) {
-    documentDAO.getMovies(query.query).then((movies) => {
-      const answer = movies.map((movie) => ({
-        id: movie._id,
-        type: 'article',
-        title: movie.title,
-        description: movie.description,
-        reply_markup: buildLikeKeyboard(movie._id),
-        input_message_content: {
-          message_text: stripMargin`
-            |Title: ${movie.title}
-            |Description: ${movie.description},
-            |Year: ${movie.year}
-            |Actors: ${movie.actors}
-            |Genres: ${movie.genre}
-          `,
-        },
-      }));
-      ctx.answerInlineQuery(answer);
-    });
-  }
-});*/
-
-/*
-// TODO : nécessaire ?
-// User chose a movie from the list displayed in the inline query
-// Used to update the keyboard and show filled stars if user already liked it
-bot.on('chosen_inline_result', (ctx) => {
-  if (ctx.from && ctx.chosenInlineResult) {
-    graphDAO.getMovieLiked(ctx.from.id, ctx.chosenInlineResult.result_id).then((liked) => {
-      if (liked !== null) {
-        ctx.editMessageReplyMarkup(buildLikeKeyboard(ctx.chosenInlineResult.result_id, liked));
-      }
-    });
-  }
-});
-*/
-
-/*
-// FIXME : DELETE -> Adapté pour Dota
-bot.on('callback_query', (ctx) => {
-  if (ctx.callbackQuery && ctx.from) {
-    const [rank, movieId] = ctx.callbackQuery.data.split('__');
-    const liked = {
-      rank: parseInt(rank, 10),
-      at: new Date(),
-    };
-
-    graphDAO.upsertMovieLiked({
-      first_name: 'unknown',
-      last_name: 'unknown',
-      language_code: 'fr',
-      is_bot: false,
-      username: 'unknown',
-      ...ctx.from,
-    }, movieId, liked).then(() => {
-      ctx.editMessageReplyMarkup(buildLikeKeyboard(movieId, liked));
-    });
-  }
-});*/
-
 bot.command('help', (ctx) => {
   ctx.reply(`
-A demo for the project given in the MAC course at the HEIG-VD.
+A little help to use our Dota Bot for the project given in the MAC course at the HEIG-VD.
 
-A user can display a movie and set a reaction to this movie (like, dislike).
-When asked, the bot will provide a recommendation based on the movies he liked or disliked.
+A user can link its Telegram account to a Dota account via its personaname. Then users in a Telegram group can follow
+and unfollow each other.
+When asked, the bot will provide a recommendation based on the most played heroes among its friends.
 
-Use inline queries to display a movie, then use the inline keyboard of the resulting message to react.
-Use the command /recommendactor to get a personalized recommendation.
+Use /playeractivity <personaname OR accountId> to display infos on the 5 latest matches of a player
+Use /linkaccount <personaname> to link your Telegram account to a Dota account
+Use /followplayer <Telegram username> to follow a user in the Telegram group
+Use /unfollowplayer <Telegram username> to unfollow a user in the Telegram group
+Use /showplayers to show the list of the currently followed users and their personananme
+Use inline queries to display a telegram user, then use the inline keyboard of the resulting message to follow/unfollow.
+Use the command /recommendhero to get a personalized recommendation.
   `);
 });
 
+/**
+ * Réagit à la commande start et affiche un message de bienvenue
+ */
 bot.command('start', (ctx) => {
-  ctx.reply('HEIG-VD Mac project example bot in javascript');
+  ctx.reply('Dota Bot in Javascript for HEIG-VD MAC-2020 course');
 });
 
-bot.command('recommendactor', (ctx) => {
-  if (!ctx.from || !ctx.from.id) {
-    ctx.reply('We cannot guess who you are');
-  } else {
-    graphDAO.recommendActors(ctx.from.id).then((records) => {
-      if (records.length === 0) ctx.reply("You haven't liked enough movies to have recommendations");
-      else {
-        const actorsList = records.map((record) => {
-          const {name} = record.get('a').properties;
-          const count = record.get('count(*)').toInt();
-          return `${name} (${count})`;
-        }).join('\n\t');
-        ctx.reply(`Based your like and dislike we recommend the following actor(s):\n\t${actorsList}`);
-      }
-    });
-  }
-});
-
+/**
+ * Fonction pour obtenir l'accountId d'un joueur Dota (nécessaire pour faire les calls à l'API OpenDota)
+ * @param personaname nom du joueur Dota
+ * @returns {Promise<*>}
+ */
 async function getAccountId(personaname) {
   const searchUrl = `https://api.opendota.com/api/search?q=${personaname}`;
 
   const resp = await fetch(searchUrl);
   const data = await resp.json();
-  return data[0].account_id; // TODO : account_id du premier user uniquement, voir si possibilité de proposer une liste de choix (users avec le même nom)
+  return data[0].account_id; // account_id du premier user uniquement (certains joueurs ont le même nom)
 }
 
+/**
+ * Fonction pour obtenir des données sur les 20 derniers matches d'un joueur via son Dota accountId
+ * @param accountId ID du compte du joueur Dota
+ * @returns {Promise<*>}
+ */
 async function getRecentMatchData(accountId) {
   const recentMatchesUrl = `https://api.opendota.com/api/players/${accountId}/recentMatches`;
 
@@ -145,28 +67,25 @@ async function getRecentMatchData(accountId) {
   return await resp.json();
 }
 
-async function getHeroNames() {
-  const recentMatchesUrl = `https://api.opendota.com/api/heroStats`;
-
-  const resp = await fetch(recentMatchesUrl);
-  return await resp.json();
-}
-
+/**
+ * Fonction qui retourne le nom d'un joueur Dota à partir de son accountId
+ * @param accountId ID du compte du joueur Dota
+ * @returns {Promise<*>}
+ */
 async function getPlayerName(accountId) {
   const playerName = `https://api.opendota.com/api/players/${accountId}`;
   const resp = await fetch(playerName);
   return await resp.json();
 }
 
-// source: https://apps.timwhitlock.info/emoji/tables/unicode
-// take Unicode value
-
-
+/**
+ * Formate les données de match pour l'affichage dans un message Telegram
+ * @param matchData
+ * @returns {{text: string, win: number}}
+ */
 function formatMatchData(matchData) {
   const matchID = matchData.match_id;
-  // https://docs.opendota.com/#tag/players%2Fpaths%2F~1players~1%7Baccount_id%7D~1recentMatches%2Fget
-  // Which slot the player is in. 0-127 are Radiant, 128-255 are Dire
-  const playerSlot = matchData.player_slot;
+  const playerSlot = matchData.player_slot; // Which slot the player is in. 0-127 are Radiant, 128-255 are Dire
   const radiantWin = matchData.radiant_win;
   const {duration} = matchData;
   const {hero_id} = matchData;
@@ -202,17 +121,19 @@ function formatMatchData(matchData) {
   return {text: text, win: hasPlayerWon ? 1 : 0};
 }
 
+/**
+ * Réagit à une demande d'activité récente d'un joueur Dota
+ * Usage : /playeractivity <personaname OR accountId>
+ */
 bot.command('playeractivity', (ctx) => {
   // Récupère la commande et parse le paramètre (personaname = nom du joueur)
   const msgText = ctx.message.text;
   const arguments = msgText.split(' ');
   let personName;
-  // https://www.opendota.com/players/103367483
-  // using the numbers here works
   if (arguments.length > 1 && arguments[1] != null) {
     personName = arguments[1];
   } else {
-    ctx.reply("Vous devez préciser le nom d'un joueur pour obtenir son activité récente (/playeractivity <steam32 id>)");
+    ctx.reply("You need to specify a player name to get its recent activity (/playeractivity <personaname OR accountId>)");
     return;
   }
 
@@ -222,8 +143,10 @@ bot.command('playeractivity', (ctx) => {
         let personaname = personFullName.profile.personaname;
         let person = `[${personaname}](https://www.opendota.com/players/${accountId})`;
         const NB_MATCHES = 5;
-        var output = "";
-        var wins = 0;
+        let output = "";
+        let wins = 0;
+
+        // N'affiche que les NB_MATCHES premiers matches
         for (let i = 0; i < NB_MATCHES; ++i) {
           const match = formatMatchData(recentMatchesData[i]);
           output += match.text;
@@ -231,7 +154,6 @@ bot.command('playeractivity', (ctx) => {
         }
         output += `${person} has won ${wins}/${NB_MATCHES} of his recent matches`;
 
-        // note: * bold * works
         ctx.reply(text = `Last ${NB_MATCHES} matches activity for ${person} :\n${output}`, {parse_mode: 'markdown'});
       });
     });
@@ -277,6 +199,7 @@ bot.command('linkaccount', (ctx) => {
 
 /**
  * Réagit à la commande pour suivre un compte Telegram associé à un compte Dota
+ * Usage : /followplayer <Telegram username>
  */
 bot.command('followplayer', (ctx) => {
   // Récupère la commande et parse le paramètre (telegramUsername)
@@ -295,9 +218,13 @@ bot.command('followplayer', (ctx) => {
     ctx.reply(`You are now following Telegram user ${telegramUsername} !` + Emojis.faceStars);
   })
 
-  // TODO : Improve, afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
+  // TODO : Nice to have - afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
 });
 
+/**
+ * Réagit à la commande pour arrêter de suivre un compte Telegram associé à un compte Dota
+ * Usage : /unfollowplayer <Telegram username>
+ */
 bot.command('unfollowplayer', (ctx) => {
   // Récupère la commande et parse le paramètre (telegramUsername)
   const msgText = ctx.message.text;
@@ -310,18 +237,21 @@ bot.command('unfollowplayer', (ctx) => {
     return;
   }
 
-  // Enregistre la relation FOLLOWING entre 2 utilisateurs Telegram
+  // Supprime la relation FOLLOWING entre 2 utilisateurs Telegram
   graphDAO.deleteUserFollowing(ctx.from.id, telegramUsername).then(() => {
     ctx.reply(`${telegramUsername} is not your friend anymore` + Emojis.faceCrying);
   })
 });
 
+/**
+ * Réagit à la commande permettant d'afficher les amis suivis et leur personaname Dota
+ * Usage : /showfollowings
+ */
 bot.command('showfollowings', (ctx) => {
   graphDAO.getFriends(ctx.from.id).then((friends) => {
-    console.log(friends);
     let friendsList = '';
     friends.forEach(friend => {
-      friendsList += friend.username + ' aka ' + friend.personaname + '\n';
+      friendsList += '  - ' + friend.username + ' aka ' + friend.personaname + '\n';
     })
 
     ctx.reply(`Here's your friends list :\n${friendsList}`)
@@ -331,8 +261,8 @@ bot.command('showfollowings', (ctx) => {
 /**
  * Réagit à l'utilisation de inline queries ('@<nom du bot> <requête ...>')
  * Les résultats proposés sont sous la forme :
- * <Initiale du nom d'utilisateur Telegram> <Telegram username>\n
- *                                          <personaname du joueur>
+ * <Telegram username>\n
+ * <personaname du joueur>
  */
 bot.on('inline_query', (ctx) => {
   const query = ctx.inlineQuery;
@@ -350,7 +280,7 @@ bot.on('inline_query', (ctx) => {
             |Selected user :
             |Telegram username: ${user.username}
             |Dota personaname: ${user.personaname}
-          `, // TODO : Afficher + de stats sur le compte ?
+          `,
         },
       }));
       ctx.answerInlineQuery(answer);
@@ -358,6 +288,12 @@ bot.on('inline_query', (ctx) => {
   }
 });
 
+/**
+ * Function to build a "follow/unfollow" keyboard for friends
+ * @param username
+ * @param isFollowed
+ * @returns {{inline_keyboard: [[{text: string, callback_data: string}]]}}
+ */
 function buildFollowKeyboard(username, isFollowed) {
   return {
     inline_keyboard: [
@@ -365,7 +301,7 @@ function buildFollowKeyboard(username, isFollowed) {
         {
           text: !isFollowed ? "Follow ❤ " : "Unfollow 💔 ",
           callback_data: !isFollowed ? `follow__${username}` : `unfollow__${username}`
-        },// TODO : Afficher 3 boutons au callback : "follow ❤", "unfollow 💔" et "Recommend hero" ? */
+        },
       ]
     ],
   };
@@ -379,10 +315,8 @@ bot.on('callback_query', (ctx) => {
       // Enregistre la relation FOLLOW entre 2 utilisateurs Telegram
       graphDAO.upsertUserFollowed(ctx.from.id, username).then(() => {
         ctx.editMessageReplyMarkup(buildFollowKeyboard(username, true));
-        // TODO : Trouver un moyen pour afficher une confirmation de un/follow ou modifier le message existant
-        //ctx.reply(`You are now following Telegram user ${username} !`);
       })
-    } else if (type === "unfollow") { // Supprime la relation FOLLOW dans le grapge
+    } else if (type === "unfollow") { // Supprime la relation FOLLOW dans le graphe
       graphDAO.deleteUserFollowing(ctx.from.id, username).then(() => {
         ctx.editMessageReplyMarkup(buildFollowKeyboard(username, false));
       })
@@ -390,75 +324,17 @@ bot.on('callback_query', (ctx) => {
   }
 });
 
-/*
-bot.command('recommendhero', (ctx) => {
-  let friendsSet = new Set();
-  let recentHeroes = new Set();
-  let recommendedHeroes = new Set();
-  let displayHeroes = '';
-
-  graphDAO.getFollowedPlayer(ctx.from.id).then(firstLevelFriends => {
-    //console.log("FIRST");
-    //console.log(firstLevelFriends);
-
-    // Stocke les amis de 1er niveau
-    firstLevelFriends.forEach(friend => {
-      friendsSet.add(friend)
-
-      graphDAO.getFollowedPlayer(friend.id.low).then(secondLevelFriends => {
-        //console.log("SECOND");
-        //console.log(secondLevelFriends);
-
-        //console.log(secondLevelFriendsSet);
-
-        // Stocke les amis de 2ème niveau
-        secondLevelFriends.forEach(friend => {
-          friendsSet.add(friend);
-
-          // Obtient les données des 30 derniers matchs
-          getRecentMatchData(friend.accountId).then(recentMatchesData => {
-            //console.log(recentMatchesData);
-
-            // Stocke les ID des héros
-            recentMatchesData.forEach(match => {
-              recentHeroes.add(match.hero_id);
-            });
-
-            // Cherche le nom du héro à partir de son ID
-            recentHeroes.forEach(heroId => {
-              getHeroName(heroId).then(results => {
-                results.forEach(hero => {
-
-                  // Stocke le nom du héro pour l'afficher à l'utilisateur
-                  if (heroId === hero.id) {
-                    //console.log(hero.localized_name);
-                    recommendedHeroes.add(hero.localized_name);
-                  }
-                });
-
-                console.log(recommendedHeroes);
-              });
-            });
-          });
-        });
-      });
-    });
-  });
-});
+/**
+ * Réagit à l'appel de la commande de recommendation de héro Dota sur la base de l'utilisation récente de nos amis
  */
-
 bot.command('recommendhero', (ctx) => {
   if (ctx.from) {
     // Obtient les amis de premier niveau
     graphDAO.getFriends(ctx.from.id).then((friend) => {
       if (friend !== null) {
-        console.log("MON ID - ", ctx.from.id);
-
         let map = new Map();
         // Ajoute les amis de premier niveau au set
         friend.map((x) => map.set(x.id.low, x));
-
-        friend.map((x) => console.log("1st level friend - ", x));
 
         // Obtient les amis de second niveau
         let friendsRelationship = friend.map((x) => graphDAO.getFriends(x.id.low).then((secondFriend) => {
@@ -467,9 +343,6 @@ bot.command('recommendhero', (ctx) => {
           }
         }))
 
-        Promise.all(friendsRelationship).then(x => console.log(x.map(z => z)));
-
-        // TODO : ajouter seulement les amis de 2ème niveau ?
         // Ajoute tous les amis de 2ème niveau au set
         Promise.all(friendsRelationship).then(x => x.filter(y => y !== undefined).map(z => {
           z.map(v => map.set(v.id.low, v));
@@ -483,32 +356,39 @@ bot.command('recommendhero', (ctx) => {
               ps.push(p);
             });
 
+            // Obtient tous les matches
             Promise.all(ps).then(playerMatches => {
-              playerMatches = playerMatches.flat(); // all matches
+              playerMatches = playerMatches.flat();
               let heroIds = {};
-              playerMatches = playerMatches.map(m => m.hero_id); // id of heroes used
+
+              // Obtient tous les IDs des héros utilisés lors des matches
+              playerMatches = playerMatches.map(m => m.hero_id);
               playerMatches.forEach(id => {
-                if (typeof heroIds[id] === 'undefined'){
+                if (typeof heroIds[id] === 'undefined') {
                   heroIds[id] = 1;
                 } else {
                   heroIds[id]++;
                 }
               });
+
+              // Trie les héros par fréquence d'apparition décroissante
               let sortable = [];
-              for (var hero in heroIds) {
+              for (let hero in heroIds) {
                 sortable.push([hero, heroIds[hero]]);
               }
-              sortable.sort(function(a, b) {
+              sortable.sort(function (a, b) {
                 return b[1] - a[1];
               });
 
+              // Limite le résultat à 5 héros
               sortable = sortable.map(x => x[0]);
               heroesToRecommend = [];
-              for(let i = 0; i < 5; i++){
+              for (let i = 0; i < 5; i++) {
                 const hero = Heroes.heroes[sortable[i] - 2];
                 heroesToRecommend.push(hero.localized_name);
               }
 
+              //Affiche le résultat à l'utilisateur
               let answer = "The recommended heroes are:\n";
               heroesToRecommend.forEach(v => answer += "- " + v + "\n");
               answer += "\n\nHeroes were selected among your friend's (and friends of friends) most played"

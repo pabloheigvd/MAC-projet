@@ -23,10 +23,6 @@ class DocumentDAO {
     return this.client.close();
   }
 
-  insertMovie(movie) {
-    return this.collection.insertOne(movie);
-  }
-
   insertUser(user) {
     return this.collection.updateOne({ username: user.username },
       {
@@ -43,27 +39,8 @@ class DocumentDAO {
       }, { upsert: true });
   }
 
-  getMovies(search) {
-    return this.collection.find({ title: new RegExp(search) }).limit(10).toArray();
-  }
-
   getRegisteredUsers(search) {
     return this.collection.find({ username: new RegExp(search) }).limit(10).toArray();
-  }
-
-  getMovieById(id) {
-    return this.collection.findOne({ _id: id });
-  }
-
-  getRandomMovies(n) {
-    return this.collection.find().limit(n).toArray();
-  }
-
-  getAllMovies() {
-    return this.collection.find().toArray().then((result) => result.map((it) => ({
-      ...it,
-      _id: it._id.toString(),
-    })));
   }
 }
 
