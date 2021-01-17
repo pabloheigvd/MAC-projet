@@ -144,9 +144,10 @@ class GraphDAO {
     });
   }
 
-  getFollowedPlayer(userId) {
-    return this.run('MATCH (User{id: $userId})-[FOLLOW]->(u:User) RETURN u', {
+  getFollowedPlayer(userId, followedUserId) {
+    return this.run('MATCH (User{id: $userId})-[FOLLOW]->(u:User{id: $followedUserId}) RETURN u', {
       userId,
+      followedUserId,
     }).then((res) => {
       if (res.records.length === 0) return null;
 

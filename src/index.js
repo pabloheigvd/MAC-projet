@@ -278,7 +278,6 @@ bot.command('linkaccount', (ctx) => {
 /**
  * Réagit à la commande pour suivre un compte Telegram associé à un compte Dota
  */
-// FIXME : DELETE -> Fait avec les inline queries
 bot.command('followplayer', (ctx) => {
   // Récupère la commande et parse le paramètre (telegramUsername)
   const msgText = ctx.message.text;
@@ -293,10 +292,40 @@ bot.command('followplayer', (ctx) => {
 
   // Enregistre la relation FOLLOWING entre 2 utilisateurs Telegram
   graphDAO.upsertUserFollowed(ctx.from.id, telegramUsername).then(() => {
-    ctx.reply(`You are now following Telegram user ${telegramUsername} !`);
+    ctx.reply(`You are now following Telegram user ${telegramUsername} !` + Emojis.faceStars);
   })
 
   // TODO : Improve, afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
+});
+
+bot.command('unfollowplayer', (ctx) => {
+  // Récupère la commande et parse le paramètre (telegramUsername)
+  const msgText = ctx.message.text;
+  const arguments = msgText.split(' ');
+  let telegramUsername;
+  if (arguments.length === 2) {
+    telegramUsername = arguments[1];
+  } else {
+    ctx.reply("Usage is '/unfollowplayer <Telegram username>'");
+    return;
+  }
+
+  // Enregistre la relation FOLLOWING entre 2 utilisateurs Telegram
+  graphDAO.deleteUserFollowing(ctx.from.id, telegramUsername).then(() => {
+    ctx.reply(`${telegramUsername} is not your friend anymore` + Emojis.faceCrying);
+  })
+});
+
+bot.command('showfollowings', (ctx) => {
+  graphDAO.getFriends(ctx.from.id).then((friends) => {
+    console.log(friends);
+    let friendsList = '';
+    friends.forEach(friend => {
+      friendsList += friend.username + ' aka ' + friend.personaname + '\n';
+    })
+
+    ctx.reply(`Here's your friends list :\n${friendsList}`)
+  })
 });
 
 /**
@@ -314,8 +343,8 @@ bot.on('inline_query', (ctx) => {
         id: user._id,
         type: 'article', // Type de résultat inline query affiché (https://core.telegram.org/bots/api#inlinequeryresult)
         title: user.username, // Titre affiché dans la inline query
-        description: `Dota username : ` + user.personaname, // Description affichée dans la inline query
-        reply_markup: buildFollowKeyboard(user.username),
+        description: `Dota username : ` + user.personaname + `-id=` + user._id, // Description affichée dans la inline query
+        reply_markup: buildFollowKeyboard(user._id),
         input_message_content: {
           message_text: stripMargin`
             |Selected user :
@@ -358,6 +387,18 @@ bot.on('callback_query', (ctx) => {
         ctx.editMessageReplyMarkup(buildFollowKeyboard(username, false));
       })
     }
+  }
+});
+
+// User chose a movie from the list displayed in the inline query
+// Used to update the keyboard and show filled stars if user already liked it
+bot.on('chosen_inline_result', (ctx) => {
+  if (ctx.from && ctx.chosenInlineResult) {
+    graphDAO.getFollowedPlayer(ctx.from.id, ctx.chosenInlineResult.result_id).then((follow) => {
+      if (follow !== null) {
+        ctx.editMessageReplyMarkup(buildFollowKeyboard(ctx.chosenInlineResult.result_id, true));
+      }
+    });
   }
 });
 
@@ -447,12 +488,15 @@ bot.command('recommendhero', (ctx) => {
         })).then(() => {
             console.log("set", set);
 
+            let uniqueHeroNames = [];
+            let uniqueHeroesToRecommend = [];
+
             // Parcourt tous les amis
             set.forEach((user) => {
               ctx.reply(`You are friend with Telegram user ${user.username}`);
 
               // Obtient les données des matchs récents
-              getRecentMatchData(user.accountId).then((data) => {
+              let matchData = getRecentMatchData(user.accountId).then((data) => {
                 // console.log(data);
 
                 let heroIds = [];
@@ -466,11 +510,16 @@ bot.command('recommendhero', (ctx) => {
                   heroNames.push(hero.localized_name);
                 })
 
-                heroNames.map((x) => [x, 1]).reduce(+)
-
-                heroNames.forEach(name => console.log(name))
+                uniqueHeroNames = uniqueHeroNames.concat(heroNames);
+                uniqueHeroesToRecommend = uniqueHeroNames.flatMap((x) => [x, 1])//.reduce((a, b) => a.second + b.second)
+                //console.log(uniqueHeroesToRecommend);
+                return uniqueHeroesToRecommend;
               })
             })
+
+            console.log(uniqueHeroesToRecommend)
+
+
           }
         )
       } else {

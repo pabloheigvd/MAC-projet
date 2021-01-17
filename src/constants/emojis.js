@@ -8,7 +8,9 @@ const coin = '\u{1FA99}'; // note: works on mobile
 const cup = '\u{1F3C6}';
 const pill = '\u{1F48A}';
 const player = '\u{1F3AE}';
+const faceStars = '\u{1F929}';
+const faceCrying = '\u{1F62D}';
 
 module.exports = {
-  moneyBag, expDiamond, feed, target, castle, time, coin, cup, pill, player,
+  moneyBag, expDiamond, feed, target, castle, time, coin, cup, pill, player, faceStars, faceCrying,
 };
