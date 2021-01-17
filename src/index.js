@@ -445,41 +445,18 @@ bot.command('recommendhero', (ctx) => {
         Promise.all(friendsRelationship).then(x => x.filter(y => y !== undefined).map(z => {
           z.map(v => map.set(v.id.low, v));
         })).then(() => {
-            console.log("set", map);
-
             let heroesToRecommend = [];
 
             // Parcourt tous les amis
             let ps = [];
-
             map.forEach((user) => {
-              ctx.reply(`You are friend with Telegram user ${user.username}`);
-
               let p = getRecentMatchData(user.accountId);
               ps.push(p);
             });
 
-            // let heroIds = [];
-            // for (let a of data) {
-            //   heroIds.push(a.hero_id);
-            // }
-            //
-            // let heroNames = [];
-            // heroIds.forEach((id) => {
-            //   const hero = Heroes.heroes.find(e => e.id === id);
-            //   heroNames.push(hero.localized_name);
-            // })
-            //
-            // heroesToRecommend = heroesToRecommend.concat(heroNames);
-
             Promise.all(ps).then(playerMatches => {
-              // console.log(playerMatches); // map data tous
-              // console.log(playerMatches.length);
               playerMatches = playerMatches.flat(); // all matches
-              // console.log(playerMatches.length);
-              // console.log(playerMatches[0]);
               let heroIds = {};
-              console.log(playerMatches);
               playerMatches = playerMatches.map(m => m.hero_id); // id of heroes used
               playerMatches.forEach(id => {
                 if (typeof heroIds[id] === 'undefined'){
@@ -488,11 +465,26 @@ bot.command('recommendhero', (ctx) => {
                   heroIds[id]++;
                 }
               });
-              console.log(heroIds);
-            // .forEach((id) => {
-            //     const hero = Heroes.heroes.find(e => e.id === id);
-            //     heroNames.push(hero.localized_name);
-            //   });
+              let sortable = [];
+              for (var hero in heroIds) {
+                sortable.push([hero, heroIds[hero]]);
+              }
+              sortable.sort(function(a, b) {
+                return b[1] - a[1];
+              });
+
+              sortable = sortable.map(x => x[0]);
+              heroesToRecommend = [];
+              for(let i = 0; i < 5; i++){
+                const hero = Heroes.heroes[sortable[i] - 2];
+                heroesToRecommend.push(hero.localized_name);
+              }
+
+              let answer = "The recommended heroes are:\n";
+              heroesToRecommend.forEach(v => answer += "- " + v + "\n");
+              answer += "\n\nHeroes were selected among your friend's (and friends of friends) most played"
+
+              ctx.reply(answer);
             });
           }
         )
