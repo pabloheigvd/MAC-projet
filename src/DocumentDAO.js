@@ -27,8 +27,26 @@ class DocumentDAO {
     return this.collection.insertOne(movie);
   }
 
+  insertUser(user) {
+    return this.collection.updateOne({ username: user.username },
+      {
+        $set:
+          {
+            is_bot: user.is_bot,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            username: user.username,
+            personaname: user.personaname,
+          },
+      }, { upsert: true });
+  }
+
   getMovies(search) {
     return this.collection.find({ title: new RegExp(search) }).limit(10).toArray();
+  }
+
+  getRegisteredUsers(search) {
+    return this.collection.find({ username: new RegExp(search) }).limit(10).toArray();
   }
 
   getMovieById(id) {
