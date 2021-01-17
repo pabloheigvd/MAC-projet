@@ -145,6 +145,13 @@ async function getRecentMatchData(accountId) {
   return await resp.json();
 }
 
+async function getHeroNames() {
+  const recentMatchesUrl = `https://api.opendota.com/api/heroStats`;
+
+  const resp = await fetch(recentMatchesUrl);
+  return await resp.json();
+}
+
 async function getPlayerName(accountId) {
   const playerName = `https://api.opendota.com/api/players/${accountId}`;
   const resp = await fetch(playerName);
@@ -180,17 +187,17 @@ function formatMatchData(matchData) {
 
   const hero = Heroes.heroes.find(e => e.id === hero_id);
 
-  const text = `[Match link](https://www.opendota.com/matches/${matchID})\n`+
-      Emojis.cup + winLose + ` as ${winner}\n` +
-      Emojis.player + ` played as ${hero.localized_name}\n` +
-      Emojis.feed + ` K/D/A : ${kills}/${deaths}/${assists}\n` +
-      Emojis.expDiamond + ` XP per min : ${xpPerMin}\n` +
-      Emojis.moneyBag + ` Gold per min : ${goldPerMin}\n` +
-      Emojis.target + ` Hero damage : ${heroDamage}\n` +
-      Emojis.castle + ` Tower damage : ${towerDamage}\n` +
-      Emojis.pill + ` Hero healing : ${heroHealing}\n` +
-      Emojis.coin + ` Last hits : ${lastHits}\n` +
-      Emojis.time + ` Duration : ${duration}\n---\n`;
+  const text = `[Match link](https://www.opendota.com/matches/${matchID})\n` +
+    Emojis.cup + winLose + ` as ${winner}\n` +
+    Emojis.player + ` played as ${hero.localized_name}\n` +
+    Emojis.feed + ` K/D/A : ${kills}/${deaths}/${assists}\n` +
+    Emojis.expDiamond + ` XP per min : ${xpPerMin}\n` +
+    Emojis.moneyBag + ` Gold per min : ${goldPerMin}\n` +
+    Emojis.target + ` Hero damage : ${heroDamage}\n` +
+    Emojis.castle + ` Tower damage : ${towerDamage}\n` +
+    Emojis.pill + ` Hero healing : ${heroHealing}\n` +
+    Emojis.coin + ` Last hits : ${lastHits}\n` +
+    Emojis.time + ` Duration : ${duration}\n---\n`;
 
   return {text: text, win: hasPlayerWon ? 1 : 0};
 }
@@ -247,22 +254,25 @@ bot.command('linkaccount', (ctx) => {
     return;
   }
 
-  let user = {
-    first_name: 'unknown',
-    last_name: 'unknown',
-    is_bot: false,
-    username: 'unknown',
-    ...ctx.from,
-    personaname,
-  }
+  getAccountId(personaname).then(accountId => {
+    let user = {
+      first_name: 'unknown',
+      last_name: 'unknown',
+      is_bot: false,
+      username: 'unknown',
+      ...ctx.from,
+      personaname,
+      accountId,
+    }
 
-  // Insère l'utilisateur dans la DB Graph
-  graphDAO.upsertUser(user).then(() => {
-    ctx.reply(`Telegram user ${ctx.from.username} has been registered with dota account ${personaname}`);
+    // Insère l'utilisateur dans la DB Graph
+    graphDAO.upsertUser(user).then(() => {
+      ctx.reply(`Telegram user ${ctx.from.username} has been registered with dota account ${personaname}`);
+    });
+
+    // Enregistre aussi l'utilisateur sur MongoDB (pour pouvoir utiliser DocumentDAO.getRegisteredUsers() )
+    documentDAO.insertUser(user);
   });
-
-  // Enregistre aussi l'utilisateur sur MongoDB (pour pouvoir utiliser DocumentDAO.getRegisteredUsers() )
-  documentDAO.insertUser(user);
 });
 
 /**
@@ -350,6 +360,140 @@ bot.on('callback_query', (ctx) => {
     }
   }
 });
+
+/*
+bot.command('recommendhero', (ctx) => {
+  let friendsSet = new Set();
+  let recentHeroes = new Set();
+  let recommendedHeroes = new Set();
+  let displayHeroes = '';
+
+  graphDAO.getFollowedPlayer(ctx.from.id).then(firstLevelFriends => {
+    //console.log("FIRST");
+    //console.log(firstLevelFriends);
+
+    // Stocke les amis de 1er niveau
+    firstLevelFriends.forEach(friend => {
+      friendsSet.add(friend)
+
+      graphDAO.getFollowedPlayer(friend.id.low).then(secondLevelFriends => {
+        //console.log("SECOND");
+        //console.log(secondLevelFriends);
+
+        //console.log(secondLevelFriendsSet);
+
+        // Stocke les amis de 2ème niveau
+        secondLevelFriends.forEach(friend => {
+          friendsSet.add(friend);
+
+          // Obtient les données des 30 derniers matchs
+          getRecentMatchData(friend.accountId).then(recentMatchesData => {
+            //console.log(recentMatchesData);
+
+            // Stocke les ID des héros
+            recentMatchesData.forEach(match => {
+              recentHeroes.add(match.hero_id);
+            });
+
+            // Cherche le nom du héro à partir de son ID
+            recentHeroes.forEach(heroId => {
+              getHeroName(heroId).then(results => {
+                results.forEach(hero => {
+
+                  // Stocke le nom du héro pour l'afficher à l'utilisateur
+                  if (heroId === hero.id) {
+                    //console.log(hero.localized_name);
+                    recommendedHeroes.add(hero.localized_name);
+                  }
+                });
+
+                console.log(recommendedHeroes);
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+});
+ */
+
+bot.command('recommendhero', (ctx) => {
+  if (ctx.from) {
+    // Obtient les amis de premier niveau
+    graphDAO.getFriends(ctx.from.id).then((friend) => {
+      if (friend !== null) {
+        console.log("MON ID - ", ctx.from.id);
+
+        let map = new Map();
+        // Ajoute les amis de premier niveau au set
+        friend.map((x) => map.set(x.id.low, x));
+
+        friend.map((x) => console.log("1st level friend - ", x));
+
+        // Obtient les amis de second niveau
+        let friendsRelationship = friend.map((x) => graphDAO.getFriends(x.id.low).then((secondFriend) => {
+          if (secondFriend != null) {
+            return secondFriend.map((y) => y);
+          }
+        }))
+
+        Promise.all(friendsRelationship).then(x => console.log(x.map(z => z)));
+
+        // TODO : ajouter seulement les amis de 2ème niveau ?
+        // Ajoute tous les amis de 2ème niveau au set
+        Promise.all(friendsRelationship).then(x => x.filter(y => y !== undefined).map(z => {
+          z.map(v => map.set(v.id.low, v));
+        })).then(() => {
+            let heroesToRecommend = [];
+
+            // Parcourt tous les amis
+            let ps = [];
+            map.forEach((user) => {
+              let p = getRecentMatchData(user.accountId);
+              ps.push(p);
+            });
+
+            Promise.all(ps).then(playerMatches => {
+              playerMatches = playerMatches.flat(); // all matches
+              let heroIds = {};
+              playerMatches = playerMatches.map(m => m.hero_id); // id of heroes used
+              playerMatches.forEach(id => {
+                if (typeof heroIds[id] === 'undefined'){
+                  heroIds[id] = 1;
+                } else {
+                  heroIds[id]++;
+                }
+              });
+              let sortable = [];
+              for (var hero in heroIds) {
+                sortable.push([hero, heroIds[hero]]);
+              }
+              sortable.sort(function(a, b) {
+                return b[1] - a[1];
+              });
+
+              sortable = sortable.map(x => x[0]);
+              heroesToRecommend = [];
+              for(let i = 0; i < 5; i++){
+                const hero = Heroes.heroes[sortable[i] - 2];
+                heroesToRecommend.push(hero.localized_name);
+              }
+
+              let answer = "The recommended heroes are:\n";
+              heroesToRecommend.forEach(v => answer += "- " + v + "\n");
+              answer += "\n\nHeroes were selected among your friend's (and friends of friends) most played"
+
+              ctx.reply(answer);
+            });
+          }
+        )
+      } else {
+        ctx.reply("You currently do not have any friends. Add some with the inline query or the /followplayer command");
+      }
+    });
+  }
+})
 
 // Initialize mongo connexion
 // before starting bot
