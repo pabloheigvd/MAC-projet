@@ -143,7 +143,7 @@ async function getRecentMatchData(accountId) {
   return await resp.json();
 }
 
-async function getHeroName(heroId) {
+async function getHeroNames() {
   const recentMatchesUrl = `https://api.opendota.com/api/heroStats`;
 
   const resp = await fetch(recentMatchesUrl);
@@ -296,51 +296,6 @@ bot.command('followplayer', (ctx) => {
   // TODO : Improve, afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
 });
 
-bot.command('recommendhero', (ctx) => {
-
-  //Get friends
-  //graphDAO.select
-  if (ctx.from) {
-
-    graphDAO.getFriends(ctx.from.id).then((friend) => {
-      if (friend !== null) {
-        console.log("MON ID - ",ctx.from.id);
-
-        let set = new Set();
-        // first level of relation
-        friend.record.map((x)=> set.add(x));
-
-        friend.record.map((x)=> console.log("1 level of friends - ",x));
-
-        //second level of relation (if exists)
-        let friendsRelationship = friend.record.map((x)=> graphDAO.getFriends(x).then((secondFriend) => {
-          if(secondFriend != null) {
-            return secondFriend.record.map((y) => y);
-          }
-        }))
-
-        Promise.all(friendsRelationship).then(x => console.log(x.map(z => z)));
-
-        Promise.all(friendsRelationship).then(x => x.filter(y => y!== undefined).map(z => {
-          z.map(v => set.add(v));
-        })).then(() => {
-          console.log("ONLY ONCE");
-          console.log("set",set);
-          set.forEach((id) => {
-            ctx.reply(`You are friend with Telegram user ${id}  !`);
-          })
-          // CONTINUER LA LOGIQUE
-        });
-
-        // aussi ici ??
-
-      }else{
-        ctx.reply(friend);
-      }
-    });
-  }
-});
-
 /**
  * Réagit à l'utilisation de inline queries ('@<nom du bot> <requête ...>')
  * Les résultats proposés sont sous la forme :
@@ -403,6 +358,7 @@ bot.on('callback_query', (ctx) => {
   }
 });
 
+/*
 bot.command('recommendhero', (ctx) => {
   let friendsSet = new Set();
   let recentHeroes = new Set();
@@ -457,6 +413,84 @@ bot.command('recommendhero', (ctx) => {
     });
   });
 });
+ */
+
+bot.command('recommendhero', (ctx) => {
+  if (ctx.from) {
+    // Obtient les amis de premier niveau
+    graphDAO.getFriends(ctx.from.id).then((friend) => {
+      if (friend !== null) {
+        console.log("MON ID - ", ctx.from.id);
+
+        let set = new Set();
+        // Ajoute les amis de premier niveau au set
+        friend.map((x) => set.add(x));
+
+        friend.map((x) => console.log("1st level friend - ", x));
+
+        // Obtient les amis de second niveau
+        let friendsRelationship = friend.map((x) => graphDAO.getFriends(x.id.low).then((secondFriend) => {
+          if (secondFriend != null) {
+            return secondFriend.map((y) => y);
+          }
+        }))
+
+        Promise.all(friendsRelationship).then(x => console.log(x.map(z => z)));
+
+        // TODO : ajouter seulement les amis de 2ème niveau ?
+        // Ajoute tous les amis de 2ème niveau au set
+        Promise.all(friendsRelationship).then(x => x.filter(y => y !== undefined).map(z => {
+          z.map(v => set.add(v));
+        })).then(() => {
+            console.log("set", set);
+
+            // Parcourt tous les amis
+            set.forEach((user) => {
+              ctx.reply(`You are friend with Telegram user ${user.username}`);
+
+              // Obtient les données des matchs récents
+              let matchData = getRecentMatchData(user.accountId).then((data) => {
+                // console.log(data);
+
+                let heroIds = new Set();
+                for (let a of data) {
+                  heroIds.add(a.hero_id);
+                }
+
+                heroIds.forEach((id) => {
+                  //console.log("Hero ID - ", id);
+                  // TODO : getHeroNames() retourne tous les héros du jeu
+                  let heroData = getHeroNames().then((stuff) => {
+                    //console.log(stuff);
+
+                    let heroNames = new Set();
+                    for (let hero of stuff) {
+                      if (hero.id === id)
+                        heroNames.add(hero.localized_name);
+                    }
+
+                    heroNames.forEach((x) => console.log(x))
+                  })
+                  Promise.all([matchData, heroData]).then();
+                })
+                /*
+                          Promise.all([matchData]).then((x) => {
+                            x.map(y
+                            heroIds
+                          )
+                          }).then(() => {
+                            heroIds
+                          })*/
+              })
+            })
+          }
+        )
+      } else {
+        ctx.reply("You currently do not have any friends. Add some with the inline query or the /followplayer command");
+      }
+    });
+  }
+})
 
 // Initialize mongo connexion
 // before starting bot
