@@ -278,7 +278,6 @@ bot.command('linkaccount', (ctx) => {
 /**
  * Réagit à la commande pour suivre un compte Telegram associé à un compte Dota
  */
-// FIXME : DELETE -> Fait avec les inline queries
 bot.command('followplayer', (ctx) => {
   // Récupère la commande et parse le paramètre (telegramUsername)
   const msgText = ctx.message.text;
@@ -293,10 +292,40 @@ bot.command('followplayer', (ctx) => {
 
   // Enregistre la relation FOLLOWING entre 2 utilisateurs Telegram
   graphDAO.upsertUserFollowed(ctx.from.id, telegramUsername).then(() => {
-    ctx.reply(`You are now following Telegram user ${telegramUsername} !`);
+    ctx.reply(`You are now following Telegram user ${telegramUsername} !` + Emojis.faceStars);
   })
 
   // TODO : Improve, afficher sous forme d'inline query comportant uniquement les utilisateurs du groupe enregistrés
+});
+
+bot.command('unfollowplayer', (ctx) => {
+  // Récupère la commande et parse le paramètre (telegramUsername)
+  const msgText = ctx.message.text;
+  const arguments = msgText.split(' ');
+  let telegramUsername;
+  if (arguments.length === 2) {
+    telegramUsername = arguments[1];
+  } else {
+    ctx.reply("Usage is '/unfollowplayer <Telegram username>'");
+    return;
+  }
+
+  // Enregistre la relation FOLLOWING entre 2 utilisateurs Telegram
+  graphDAO.deleteUserFollowing(ctx.from.id, telegramUsername).then(() => {
+    ctx.reply(`${telegramUsername} is not your friend anymore` + Emojis.faceCrying);
+  })
+});
+
+bot.command('showfollowings', (ctx) => {
+  graphDAO.getFriends(ctx.from.id).then((friends) => {
+    console.log(friends);
+    let friendsList = '';
+    friends.forEach(friend => {
+      friendsList += friend.username + ' aka ' + friend.personaname + '\n';
+    })
+
+    ctx.reply(`Here's your friends list :\n${friendsList}`)
+  })
 });
 
 /**
