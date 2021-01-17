@@ -425,9 +425,9 @@ bot.command('recommendhero', (ctx) => {
       if (friend !== null) {
         console.log("MON ID - ", ctx.from.id);
 
-        let set = new Set();
+        let map = new Map();
         // Ajoute les amis de premier niveau au set
-        friend.map((x) => set.add(x));
+        friend.map((x) => map.set(x.id.low, x));
 
         friend.map((x) => console.log("1st level friend - ", x));
 
@@ -443,16 +443,16 @@ bot.command('recommendhero', (ctx) => {
         // TODO : ajouter seulement les amis de 2ème niveau ?
         // Ajoute tous les amis de 2ème niveau au set
         Promise.all(friendsRelationship).then(x => x.filter(y => y !== undefined).map(z => {
-          z.map(v => set.add(v));
+          z.map(v => map.set(v.id.low, v));
         })).then(() => {
-            console.log("set", set);
+            console.log("set", map);
 
             let heroesToRecommend = [];
 
             // Parcourt tous les amis
             let ps = [];
 
-            set.forEach((user) => {
+            map.forEach((user) => {
               ctx.reply(`You are friend with Telegram user ${user.username}`);
 
               let p = getRecentMatchData(user.accountId);
