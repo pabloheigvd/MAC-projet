@@ -18,8 +18,8 @@ We provide a `docker-compose.yml` file for your convenience.
 
 ### Using Docker
 
-If you want to use Docker, make sure it is installed on your machine, and then run `docker-compose up` to start both
-Mongodb and Neo4j.
+If you want to use Docker, make sure it is installed on your machine, and then run `docker-compose up -V` to start both
+MongoDB and Neo4j containers with new volumes.
 
 ### Filling some users data
 
@@ -40,8 +40,8 @@ You first have to register it on Telegram, for this follow the [documentation](h
     - `unfollowplayer` - To unfollow a user in the Telegram group
     - `showfollowings` - Show the list of the currently followed users and their personananme
     - `recommendhero` - Get a personalized hero recommendation
-    - Use inline queries to display a telegram user, then use the inline keyboard of the resulting message to
-      follow/unfollow.
+    - Use inline queries `@<name of your bot> <query>` to display a telegram user, then use the inline keyboard of the
+      resulting message to follow/unfollow.
 - run `/setinline` and `/setinlinefeedback` for the bot to be able to answer inline queries
 - copy the token the botfather gave you and go to `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
   to enable active polling on your bot. Don't forget to replace `<YOUR_TOKEN>` by your actual token
@@ -57,13 +57,18 @@ To run the bot in javascript:
 ### Summary
 
 ```bash
+# create a .env file matching your DB setup (.env.example is available in files)
+
 # first terminal
 docker-compose up -V
 
 # second terminal
+npm install
 cd src/
 npm run import
 npm start
+
+# Add your bot to a Telegram chat and enjoy !
 ```
 
 ## Known issues
@@ -72,3 +77,6 @@ npm start
   following state doesn't update to reflect the correct follow state of a user, which can create a bit of confusion.
   Using regular commands such as `/followplayer`, `/unfollowplayer` and `/showfollowings` is the best option. Inline
   queries were developed more as a proof of concept for now.
+- Concerning the inline queries, we are aware that the messages are sent to everybody in the group, it's not ideal as it
+  can rapidly flood the chat and also it can bring undesired behaviours if another user decides to unfollow someone on
+  your behalf.
