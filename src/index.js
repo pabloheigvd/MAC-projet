@@ -29,9 +29,9 @@ Use /playeractivity <personaname OR accountId> to display infos on the 5 latest 
 Use /linkaccount <personaname> to link your Telegram account to a Dota account
 Use /followplayer <Telegram username> to follow a user in the Telegram group
 Use /unfollowplayer <Telegram username> to unfollow a user in the Telegram group
-Use /showplayers to show the list of the currently followed users and their personananme
+Use /showfollowings to show the list of the currently followed users and their personananme
+Use /recommendhero to get a personalized hero recommendation
 Use inline queries to display a telegram user, then use the inline keyboard of the resulting message to follow/unfollow.
-Use the command /recommendhero to get a personalized recommendation.
   `);
 });
 
